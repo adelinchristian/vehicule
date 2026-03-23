@@ -23,7 +23,14 @@
     "error": {
       "format_data_invalid": "Invalid date format. Use the format DD.MM.YYYY (e.g.: 18.04.2026).",
       "an_invalid": "Invalid year. Enter a valid 4-digit year (check the allowed range).",
-      "km_necesar": "You must first configure the vehicle's current mileage (main menu → Update mileage)."
+      "km_necesar": "You must first configure the vehicle's current mileage (main menu → Update mileage).",
+      "license_key_empty": "Please enter a license key.",
+      "license_key_invalid": "Invalid license key. Check the format and try again.",
+      "license_already_used": "This license key has already been used on another installation.",
+      "license_key_expired": "This license key has expired.",
+      "license_fingerprint_mismatch": "This license key is bound to a different installation.",
+      "license_network_error": "Cannot connect to the license server. Check your internet connection.",
+      "license_server_error": "License server error. Please try again later."
     },
     "step": {
       "init": {
@@ -37,7 +44,8 @@
           "rovinieta": "Vignette (Rovinieta)",
           "administrativ": "Administrative / tax data",
           "mentenanta": "Maintenance",
-          "kilometraj": "Update mileage"
+          "kilometraj": "Update mileage",
+          "licenta": "License"
         }
       },
       "identificare": {
@@ -209,6 +217,13 @@
         "description": "Update the vehicle's current mileage.",
         "data": {
           "km_curent": "Current mileage"
+        }
+      },
+      "licenta": {
+        "title": "Vehicule License",
+        "description": "{license_status}\n\nEnter your license key to activate or renew the integration.",
+        "data": {
+          "license_key": "License Key"
         }
       }
     }
