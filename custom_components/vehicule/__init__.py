@@ -212,7 +212,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     # Salvăm fingerprint-ul pentru async_remove_entry
                     hass.data.setdefault(f"{DOMAIN}_notify", {}).update({
                         "fingerprint": mgr.fingerprint,
-                        "license_key": mgr.license_key,
+                        "license_key": mgr._data.get("license_key", ""),
                     })
                     _LOGGER.debug(
                         "[Vehicule] Fingerprint salvat pentru async_remove_entry"
@@ -285,6 +285,7 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
         notify_data = hass.data.pop(f"{DOMAIN}_notify", None)
         if notify_data and notify_data.get("fingerprint"):
             await _send_lifecycle_event(
+                hass,
                 notify_data["fingerprint"],
                 notify_data.get("license_key", ""),
                 "integration_removed",
@@ -292,7 +293,7 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
 
 async def _send_lifecycle_event(
-    fingerprint: str, license_key: str, action: str
+    hass: HomeAssistant, fingerprint: str, license_key: str, action: str
 ) -> None:
     """Trimite un eveniment lifecycle direct (fără LicenseManager).
 
@@ -300,10 +301,10 @@ async def _send_lifecycle_event(
     """
     import hashlib
     import hmac as hmac_lib
-    import json
     import time
 
     import aiohttp
+    from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
     from .license import INTEGRATION, LICENSE_API_URL
 
@@ -315,30 +316,32 @@ async def _send_lifecycle_event(
         "license_key": license_key,
         "integration": INTEGRATION,
     }
+    # HMAC cu fingerprint ca cheie (identic cu LicenseManager._compute_request_hmac)
     data = {k: v for k, v in payload.items() if k != "hmac"}
-    msg = json.dumps(data, sort_keys=True).encode()
+    import json as _json
+    msg = _json.dumps(data, sort_keys=True).encode()
     payload["hmac"] = hmac_lib.new(
         fingerprint.encode(), msg, hashlib.sha256
     ).hexdigest()
 
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                f"{LICENSE_API_URL}/notify",
-                json=payload,
-                timeout=aiohttp.ClientTimeout(total=10),
-                headers={
-                    "Content-Type": "application/json",
-                    "User-Agent": "Vehicule-HA-Integration/3.0",
-                },
-            ) as resp:
-                if resp.status == 200:
-                    result = await resp.json()
-                    if not result.get("success"):
-                        _LOGGER.warning(
-                            "[Vehicule] Server a refuzat '%s': %s",
-                            action, result.get("error"),
-                        )
+        session = async_get_clientsession(hass)
+        async with session.post(
+            f"{LICENSE_API_URL}/notify",
+            json=payload,
+            timeout=aiohttp.ClientTimeout(total=10),
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": "Vehicule-HA-Integration/3.0",
+            },
+        ) as resp:
+            if resp.status == 200:
+                result = await resp.json()
+                if not result.get("success"):
+                    _LOGGER.warning(
+                        "[Vehicule] Server a refuzat '%s': %s",
+                        action, result.get("error"),
+                    )
     except Exception as err:  # noqa: BLE001
         _LOGGER.debug("[Vehicule] Nu s-a putut raporta '%s': %s", action, err)
 
@@ -468,32 +471,9 @@ async def _async_inregistreaza_servicii(hass: HomeAssistant) -> None:
         """
         cale = call.data["cale_fisier"]
 
-        # ── Securitate: validare cale fișier ──
-        # Permite doar fișiere din directorul config al HA
-        config_dir = Path(hass.config.path())
-        try:
-            cale_rezolvata = Path(cale).resolve()
-        except (OSError, ValueError) as err:
-            _notifica_eroare_import(hass, f"Cale invalidă: {err}")
-            return
-
-        if not str(cale_rezolvata).startswith(str(config_dir)):
-            _notifica_eroare_import(
-                hass,
-                "Din motive de securitate, importul este permis doar "
-                f"din directorul config ({config_dir}).",
-            )
-            return
-
-        if not cale_rezolvata.suffix.lower() == ".json":
-            _notifica_eroare_import(
-                hass, "Se pot importa doar fișiere .json."
-            )
-            return
-
         # Citire fișier (I/O blocant → executor)
         def _citeste() -> dict:
-            return json.loads(cale_rezolvata.read_text(encoding="utf-8"))
+            return json.loads(Path(cale).read_text(encoding="utf-8"))
 
         try:
             date_import = await hass.async_add_executor_job(_citeste)
@@ -517,19 +497,6 @@ async def _async_inregistreaza_servicii(hass: HomeAssistant) -> None:
                 "campul 'nr_inmatriculare'.",
             )
             return
-
-        # ── Validare conținut: doar chei cunoscute ──
-        chei_permise = {
-            "version", "integration", "nr_inmatriculare", "data_export",
-            "identificare", "rca", "casco", "itp", "rovinieta",
-            "administrativ", "mentenanta", "kilometraj", "optiuni",
-        }
-        chei_necunoscute = set(date_import.keys()) - chei_permise
-        if chei_necunoscute:
-            _LOGGER.warning(
-                "[Vehicule] Import: chei necunoscute ignorate: %s",
-                chei_necunoscute,
-            )
 
         nr = date_import[CONF_NR_INMATRICULARE].strip().upper()
         nr_norm = normalizeaza_numar(nr)

@@ -48,25 +48,22 @@ _FP_SALT = "v3h1CuLe_Ha$h_2026!pZ"
 INTEGRATION = "vehicule"
 
 # ─────────────────────────────────────────────
-# Cheile publice Ed25519 ale serverului (SEC-03: suport key rotation)
+# Cheia publică Ed25519 a serverului
 # ─────────────────────────────────────────────
-# Lista permite rotația cheilor: adaugă cheia nouă PRIMA în listă,
-# iar la update-ul următor elimină cheia veche.
-# Verificarea încearcă fiecare cheie în ordine — prima care validează câștigă.
+# IMPORTANT: Înlocuiește cu cheia publică reală generată pe server.
 # Cheia privată corespunzătoare rămâne DOAR pe server.
+# Această cheie publică permite doar VERIFICAREA semnăturilor,
+# nu și crearea lor — deci e sigură să fie în cod.
+# SEC-03: Lista de chei publice — suportă key rotation
 SERVER_PUBLIC_KEYS_PEM: list[str] = [
-    # Cheia activă (primară)
     """\
 -----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEAUAZIZ1fw+b7qpq9LA47NRbHYhN8kONMxUiJyx5RHrBg=
 -----END PUBLIC KEY-----
 """,
-    # La rotație: adaugă cheia nouă AICI (index 0) și mută vechea la index 1.
-    # Clienții vechi (cu ambele chei) vor valida cu oricare.
-    # După ce TOȚI clienții s-au actualizat, elimină cheia veche.
 ]
 
-# Backward-compat: păstrează referința originală (folosită doar intern acum)
+# Backward compatibility alias (cod existent poate referi forma singulară)
 SERVER_PUBLIC_KEY_PEM = SERVER_PUBLIC_KEYS_PEM[0]
 
 
@@ -99,12 +96,13 @@ class LicenseManager:
         self._data: dict[str, Any] = {}
         self._fingerprint: str = ""
         self._loaded = False
+        self._hmac_retry_done = False
         # Token de status primit de la server (cache local)
         self._status_token: dict[str, Any] = {}
 
     @property
     def _session(self) -> aiohttp.ClientSession:
-        """Returnează sesiunea aiohttp partajată din Home Assistant."""
+        """Returnează sesiunea HTTP partajată din Home Assistant."""
         return async_get_clientsession(self._hass)
 
     # ─── Încărcare / Salvare ───
@@ -112,8 +110,15 @@ class LicenseManager:
     async def async_load(self) -> None:
         """Încarcă datele de licență din storage. Se apelează o singură dată."""
         _LOGGER.debug("[Vehicule:License] Încep async_load()")
-        stored = await self._store.async_load()
-        self._data = dict(stored) if stored else {}
+        try:
+            stored = await self._store.async_load()
+            self._data = dict(stored) if stored else {}
+        except Exception:  # noqa: BLE001
+            _LOGGER.warning(
+                "[Vehicule:License] Storage corupt sau ilizibil "
+                "— pornesc cu date goale (serverul va restaura starea)"
+            )
+            self._data = {}
         _LOGGER.debug(
             "[Vehicule:License] Date din storage: %d chei (%s)",
             len(self._data),
@@ -145,11 +150,35 @@ class LicenseManager:
         await self.async_check_status()
 
         self._loaded = True
+        final_status = self.status
         _LOGGER.debug(
             "[Vehicule:License] async_load() finalizat — status=%s, is_valid=%s",
-            self.status,
+            final_status,
             self.is_valid,
         )
+
+        # Log-uri explicite pentru fiecare status — vizibile în /logs
+        if final_status == "licensed":
+            key = self._data.get("license_key", "?")
+            _LOGGER.info(
+                "[Vehicule:License] ✓ Licență ACTIVĂ (cheie: %s)", key
+            )
+        elif final_status == "trial":
+            days = self.trial_days_remaining
+            _LOGGER.info(
+                "[Vehicule:License] ⏳ Perioadă de evaluare (trial): "
+                "%d zile rămase", days
+            )
+        elif final_status == "expired":
+            _LOGGER.warning(
+                "[Vehicule:License] ✗ EXPIRAT — perioada de evaluare "
+                "sau licența a expirat. Senzorii nu vor funcționa."
+            )
+        else:
+            _LOGGER.warning(
+                "[Vehicule:License] ✗ FĂRĂ LICENȚĂ (status=%s) — "
+                "senzorii nu vor funcționa.", final_status
+            )
 
     async def _async_save(self) -> None:
         """Salvează datele de licență."""
@@ -226,6 +255,9 @@ class LicenseManager:
             LICENSE_API_URL,
         )
 
+        # Resetează flag-ul de retry HMAC (permite un retry pe fiecare check ciclu)
+        self._hmac_retry_done = False
+
         # Trebuie să cerem status de la server
         timestamp = int(time.time())
         payload = {
@@ -261,6 +293,13 @@ class LicenseManager:
                         )
                         return self._status_token
 
+                    # Captează statusul vechi pentru detecție tranziție
+                    old_status = (
+                        self._status_token.get("status")
+                        if self._status_token
+                        else None
+                    )
+
                     # Salvează noul status token
                     self._status_token = result
                     self._data["status_token"] = result
@@ -277,28 +316,73 @@ class LicenseManager:
                             server_key,
                         )
 
-                    # Salvează client_secret de la server (SEC-01/02)
-                    # Folosit ca cheie HMAC în loc de fingerprint
-                    cs = result.get("client_secret")
-                    if cs:
-                        self._data["client_secret"] = cs
-                        # Elimină din status_token (nu trebuie cached în token)
-                        result.pop("client_secret", None)
+                    # Extrage client_secret (v3.1 — HMAC cu secret)
+                    client_secret = result.get("client_secret")
+                    if client_secret and self._data.get("client_secret") != client_secret:
+                        self._data["client_secret"] = client_secret
+                        _LOGGER.debug(
+                            "[Vehicule:License] client_secret sincronizat "
+                            "din răspunsul /check"
+                        )
 
                     await self._async_save()
 
+                    server_status = result.get("status")
                     _LOGGER.debug(
                         "[Vehicule:License] Status actualizat de la server — %s "
                         "(valid_until: %s)",
-                        result.get("status"),
+                        server_status,
                         result.get("valid_until"),
                     )
+
+                    # Log explicit de tranziție (vizibil în /logs)
+                    if server_status == "expired":
+                        _LOGGER.warning(
+                            "[Vehicule:License] Server confirmă: EXPIRAT "
+                            "(trial_days_remaining=0)"
+                        )
+                    elif server_status == "trial":
+                        _LOGGER.info(
+                            "[Vehicule:License] Server confirmă: TRIAL "
+                            "(zile rămase: %s)",
+                            result.get("trial_days_remaining", "?"),
+                        )
+
+                    # Auto-reload dacă licența a expirat
+                    if (
+                        old_status in ("licensed", "trial")
+                        and server_status in ("expired", "unlicensed")
+                    ):
+                        _LOGGER.warning(
+                            "[Vehicule:License] Licență expirată "
+                            "(%s → %s) — reload integrare",
+                            old_status,
+                            server_status,
+                        )
+                        await self._async_reload_entries()
+
                     return result
 
-                _LOGGER.warning(
-                    "[Vehicule:License] răspuns invalid de la /check — %s",
-                    result,
-                )
+                # Gestionare invalid_hmac — client_secret desincronizat
+                if result.get("error") == "invalid_hmac":
+                    if self._data.get("client_secret") and not self._hmac_retry_done:
+                        _LOGGER.warning(
+                            "[Vehicule:License] HMAC invalid — client_secret "
+                            "desincronizat. Șterg secretul local și reîncerc..."
+                        )
+                        self._data.pop("client_secret", None)
+                        await self._async_save()
+                        self._hmac_retry_done = True
+                        return await self.async_check_status()  # Retry cu fingerprint
+                    _LOGGER.error(
+                        "[Vehicule:License] HMAC invalid (retry epuizat). "
+                        "Serverul nu recunoaște acest dispozitiv."
+                    )
+                else:
+                    _LOGGER.warning(
+                        "[Vehicule:License] răspuns invalid de la /check — %s",
+                        result,
+                    )
                 return self._status_token
 
         except aiohttp.ClientError as err:
@@ -418,11 +502,6 @@ class LicenseManager:
             return token.get("license_type")
         # Verifică și din status token (pentru trial)
         return self._status_token.get("license_type")
-
-    @property
-    def license_key(self) -> str:
-        """Returnează cheia de licență (sau string gol dacă nu există)."""
-        return self._data.get("license_key", "")
 
     @property
     def license_key_masked(self) -> str | None:
@@ -836,9 +915,7 @@ class LicenseManager:
 
         Token-ul conține diverse câmpuri + 'signature'.
         Semnătura e calculată pe JSON-ul celorlalte câmpuri (sort_keys).
-
-        SEC-03: Încearcă toate cheile publice din SERVER_PUBLIC_KEYS_PEM
-        (suport key rotation — prima cheie care validează câștigă).
+        Încearcă toate cheile publice din SERVER_PUBLIC_KEYS_PEM (SEC-03 key rotation).
         """
         try:
             from cryptography.hazmat.primitives.asymmetric.ed25519 import (
@@ -860,10 +937,10 @@ class LicenseManager:
             }
             message = json.dumps(signed_data, sort_keys=True).encode()
 
-            # Încearcă fiecare cheie publică (key rotation support)
-            for key_pem in SERVER_PUBLIC_KEYS_PEM:
+            # Încearcă fiecare cheie publică (key rotation)
+            for pem in SERVER_PUBLIC_KEYS_PEM:
                 try:
-                    public_key = load_pem_public_key(key_pem.encode())
+                    public_key = load_pem_public_key(pem.encode())
                     if not isinstance(public_key, Ed25519PublicKey):
                         continue
                     public_key.verify(signature, message)
@@ -871,9 +948,7 @@ class LicenseManager:
                 except Exception:  # noqa: BLE001
                     continue
 
-            _LOGGER.debug(
-                "[Vehicule:License] nicio cheie publică nu a validat semnătura"
-            )
+            _LOGGER.debug("[Vehicule:License] nicio cheie publică nu a validat semnătura")
             return False
 
         except Exception as err:  # noqa: BLE001
@@ -885,14 +960,12 @@ class LicenseManager:
     def _compute_request_hmac(self, payload: dict[str, Any]) -> str:
         """Calculează HMAC-SHA256 pentru integritatea request-ului.
 
-        Cheia HMAC = client_secret (de la server, unic per instalare).
-        Fallback pe fingerprint dacă client_secret nu e disponibil încă
-        (prima rulare, înainte de primul /check).
+        Cheia HMAC = client_secret (v3.1) cu fallback pe fingerprint.
+        Mesajul = JSON al payload-ului fără câmpul 'hmac'.
         """
+        hmac_key = self._data.get("client_secret") or self._fingerprint
         data = {k: v for k, v in payload.items() if k != "hmac"}
         msg = json.dumps(data, sort_keys=True).encode()
-        # Folosește client_secret dacă e disponibil (v3.1)
-        hmac_key = self._data.get("client_secret") or self._fingerprint
         return hmac_lib.new(
             hmac_key.encode(),
             msg,
