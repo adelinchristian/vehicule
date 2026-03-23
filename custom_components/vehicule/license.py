@@ -95,6 +95,7 @@ class LicenseManager:
         self._store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
         self._data: dict[str, Any] = {}
         self._fingerprint: str = ""
+        self._hardware_fingerprint: str = ""
         self._loaded = False
         self._hmac_retry_done = False
         # Token de status primit de la server (cache local)
@@ -128,8 +129,13 @@ class LicenseManager:
         self._fingerprint = await self._hass.async_add_executor_job(
             self._generate_fingerprint
         )
+        self._hardware_fingerprint = await self._hass.async_add_executor_job(
+            self._generate_hardware_fingerprint
+        )
         _LOGGER.debug(
-            "[Vehicule:License] Fingerprint generat: %s...", self._fingerprint[:16]
+            "[Vehicule:License] Fingerprint generat: %s... (hw: %s...)",
+            self._fingerprint[:16],
+            self._hardware_fingerprint[:16],
         )
 
         # Restaurează status token din cache (dacă există)
@@ -223,10 +229,33 @@ class LicenseManager:
         raw = "|".join(componente) + f"|{_FP_SALT}"
         return hashlib.sha256(raw.encode()).hexdigest()
 
+    def _generate_hardware_fingerprint(self) -> str:
+        """Generează un fingerprint hardware care supraviețuiește ștergerii .storage.
+
+        Bazat DOAR pe machine-id + salt (FĂRĂ HA UUID).
+        Previne abuzul: ștergere .storage/core.uuid → UUID nou → fingerprint
+        nou → trial gratuit nelimitat. hardware_fingerprint rămâne constant.
+        """
+        machine_id = ""
+        try:
+            mid_path = Path("/etc/machine-id")
+            if mid_path.exists():
+                machine_id = mid_path.read_text().strip()
+        except Exception:  # noqa: BLE001
+            pass
+
+        raw = f"hwfp:{machine_id}|{_FP_SALT}"
+        return hashlib.sha256(raw.encode()).hexdigest()
+
     @property
     def fingerprint(self) -> str:
-        """Returnează fingerprint-ul hardware."""
+        """Returnează fingerprint-ul principal."""
         return self._fingerprint
+
+    @property
+    def hardware_fingerprint(self) -> str:
+        """Returnează fingerprint-ul hardware (anti-abuse)."""
+        return self._hardware_fingerprint
 
     # ─── Verificare status la server ───
 
@@ -264,6 +293,7 @@ class LicenseManager:
             "fingerprint": self._fingerprint,
             "timestamp": timestamp,
             "integration": INTEGRATION,
+            "hardware_fingerprint": self._hardware_fingerprint,
         }
         payload["hmac"] = self._compute_request_hmac(payload)
 
@@ -964,7 +994,10 @@ class LicenseManager:
         Mesajul = JSON al payload-ului fără câmpul 'hmac'.
         """
         hmac_key = self._data.get("client_secret") or self._fingerprint
-        data = {k: v for k, v in payload.items() if k != "hmac"}
+        data = {
+            k: v for k, v in payload.items()
+            if k not in ("hmac", "hardware_fingerprint")
+        }
         msg = json.dumps(data, sort_keys=True).encode()
         return hmac_lib.new(
             hmac_key.encode(),
