@@ -154,6 +154,16 @@ SERVICE_EXPORTA_DATE: Final = "exporta_date"
 SERVICE_IMPORTA_DATE: Final = "importa_date"
 
 # ─────────────────────────────────────────────
+# Șoferi
+# ─────────────────────────────────────────────
+CONF_SOFERI: Final = "soferi"  # listă de dict-uri
+CONF_SOFER_NUME: Final = "sofer_nume"
+CONF_SOFER_CNP: Final = "sofer_cnp"
+CONF_SOFER_NR_PERMIS: Final = "sofer_nr_permis"
+CONF_SOFER_CATEGORIE_PERMIS: Final = "sofer_categorie_permis"
+CONF_SOFER_DATA_EXPIRARE_PERMIS: Final = "sofer_data_expirare_permis"
+
+# ─────────────────────────────────────────────
 # Backup
 # ─────────────────────────────────────────────
 BACKUP_VERSION: Final = 2
@@ -343,6 +353,9 @@ STRUCTURA_CATEGORII: Final = [
             ("data_expirare", CONF_EXTINCTOR_DATA_EXPIRARE),
         ],
     }),
+    # Șoferi — structură specială (listă de dict-uri, nu câmpuri individuale)
+    # Gestionat separat în diagnostics.py și export/import
+    ("soferi", CONF_SOFERI),
 ]
 
 

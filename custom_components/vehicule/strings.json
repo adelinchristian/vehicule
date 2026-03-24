@@ -30,7 +30,8 @@
       "license_key_expired": "This license key has expired.",
       "license_fingerprint_mismatch": "This license key is bound to a different installation.",
       "license_network_error": "Cannot connect to the license server. Check your internet connection.",
-      "license_server_error": "License server error. Please try again later."
+      "license_server_error": "License server error. Please try again later.",
+      "sofer_nume_gol": "The driver's full name is required."
     },
     "step": {
       "init": {
@@ -44,6 +45,7 @@
           "rovinieta": "Vignette (Rovinieta)",
           "administrativ": "Administrative / tax data",
           "mentenanta": "Maintenance",
+          "soferi": "Drivers",
           "kilometraj": "Update mileage",
           "licenta": "License"
         }
@@ -225,6 +227,36 @@
         "data": {
           "license_key": "License Key"
         }
+      },
+      "soferi": {
+        "title": "Drivers",
+        "description": "Manage vehicle drivers. Choose an action.",
+        "data": {
+          "_actiune_sofer": "Action"
+        }
+      },
+      "soferi_adauga": {
+        "title": "Add driver",
+        "description": "Enter the driver's details. Only the full name is required.",
+        "data": {
+          "sofer_nume": "Full name",
+          "sofer_cnp": "Personal ID number (CNP)",
+          "sofer_nr_permis": "Driving license number",
+          "sofer_categorie_permis": "License category",
+          "sofer_data_expirare_permis": "License expiry date"
+        }
+      },
+      "soferi_editeaza": {
+        "title": "Edit driver — {sofer_nume}",
+        "description": "Modify the driver's details or delete the driver.",
+        "data": {
+          "sofer_nume": "Full name",
+          "sofer_cnp": "Personal ID number (CNP)",
+          "sofer_nr_permis": "Driving license number",
+          "sofer_categorie_permis": "License category",
+          "sofer_data_expirare_permis": "License expiry date",
+          "_sterge_sofer": "Delete this driver"
+        }
       }
     }
   },
@@ -334,6 +366,12 @@
           "description": "Full path to the JSON backup file (e.g.: /config/vehicule_backup_b123abc.json)."
         }
       }
+    }
+  },
+  "issues": {
+    "license_required": {
+      "title": "License required — Vehicule",
+      "description": "The integration does not have an active license.\n\nSensors for **{nr_inmatriculare}** are disabled until a valid license is obtained.\n\nTo request a license, click the button below."
     }
   }
 }

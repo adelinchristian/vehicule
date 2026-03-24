@@ -28,6 +28,8 @@ from .const import (
     CONF_IMPOZIT_SCADENTA,
     CONF_ISTORIC,
     CONF_ITP_DATA_EXPIRARE,
+    CONF_SOFERI,
+    CONF_SOFER_DATA_EXPIRARE_PERMIS,
     CONF_LEASING_DATA_EXPIRARE,
     CONF_PLACUTE_FRANA_DATA,
     CONF_RCA_DATA_EMITERE,
@@ -64,6 +66,7 @@ CAMPURI_DATA: frozenset[str] = frozenset(
         CONF_EXTINCTOR_DATA_EXPIRARE,
         CONF_ROVINIETA_DATA_INCEPUT,
         CONF_ROVINIETA_DATA_SFARSIT,
+        CONF_SOFER_DATA_EXPIRARE_PERMIS,
     }
 )
 
@@ -368,6 +371,11 @@ def structureaza_optiuni(optiuni: dict[str, Any]) -> dict[str, Any]:
                     sectiune[sub_categorie] = sub_sectiune
             if sectiune:
                 rezultat[categorie] = sectiune
+        elif isinstance(continut, str):
+            # Structuri speciale: soferi (listă de dict-uri)
+            val = optiuni.get(continut)
+            if val:
+                rezultat[categorie] = val
 
     # Istoric (separat – este o listă, nu face parte din categorii)
     istoric = optiuni.get(CONF_ISTORIC)
@@ -386,15 +394,18 @@ def aplatizeaza_optiuni(structurat: dict[str, Any]) -> dict[str, Any]:
     rezultat: dict[str, Any] = {}
 
     for categorie, continut in STRUCTURA_CATEGORII:
-        sectiune = structurat.get(categorie, {})
-        if not isinstance(sectiune, dict):
+        sectiune = structurat.get(categorie)
+        if sectiune is None:
             continue
 
-        if isinstance(continut, list):
+        if isinstance(continut, str):
+            # Structuri speciale: soferi (listă de dict-uri)
+            rezultat[continut] = sectiune
+        elif isinstance(continut, list) and isinstance(sectiune, dict):
             for cheie_json, cheie_conf in continut:
                 if cheie_json in sectiune:
                     rezultat[cheie_conf] = sectiune[cheie_json]
-        elif isinstance(continut, dict):
+        elif isinstance(continut, dict) and isinstance(sectiune, dict):
             for sub_categorie, campuri in continut.items():
                 sub_sectiune = sectiune.get(sub_categorie, {})
                 if not isinstance(sub_sectiune, dict):

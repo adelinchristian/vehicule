@@ -30,7 +30,8 @@
       "license_key_expired": "Această cheie de licență a expirat.",
       "license_fingerprint_mismatch": "Această cheie de licență este asociată altei instalări.",
       "license_network_error": "Nu se poate conecta la serverul de licențe. Verifică conexiunea la internet.",
-      "license_server_error": "Eroare server licențe. Încearcă din nou mai târziu."
+      "license_server_error": "Eroare server licențe. Încearcă din nou mai târziu.",
+      "sofer_nume_gol": "Numele complet al șoferului este obligatoriu."
     },
     "step": {
       "init": {
@@ -44,6 +45,7 @@
           "rovinieta": "Rovinieta",
           "administrativ": "Date administrative / fiscale",
           "mentenanta": "Mentenanță",
+          "soferi": "Șoferi",
           "kilometraj": "Actualizare kilometraj",
           "licenta": "Licență"
         }
@@ -225,6 +227,36 @@
         "data": {
           "license_key": "Cheie de licență"
         }
+      },
+      "soferi": {
+        "title": "Șoferi",
+        "description": "Gestionați șoferii vehiculului. Alegeți o acțiune.",
+        "data": {
+          "_actiune_sofer": "Acțiune"
+        }
+      },
+      "soferi_adauga": {
+        "title": "Adaugă șofer",
+        "description": "Introduceți datele șoferului. Doar numele complet este obligatoriu.",
+        "data": {
+          "sofer_nume": "Nume complet",
+          "sofer_cnp": "CNP",
+          "sofer_nr_permis": "Număr permis de conducere",
+          "sofer_categorie_permis": "Categorie permis",
+          "sofer_data_expirare_permis": "Data expirare permis"
+        }
+      },
+      "soferi_editeaza": {
+        "title": "Editare șofer — {sofer_nume}",
+        "description": "Modifică datele șoferului sau șterge șoferul.",
+        "data": {
+          "sofer_nume": "Nume complet",
+          "sofer_cnp": "CNP",
+          "sofer_nr_permis": "Număr permis de conducere",
+          "sofer_categorie_permis": "Categorie permis",
+          "sofer_data_expirare_permis": "Data expirare permis",
+          "_sterge_sofer": "Șterge acest șofer"
+        }
       }
     }
   },
@@ -334,6 +366,12 @@
           "description": "Calea completă către fișierul JSON de backup (ex: /config/vehicule_backup_b123abc.json)."
         }
       }
+    }
+  },
+  "issues": {
+    "license_required": {
+      "title": "Licență necesară — Vehicule",
+      "description": "Integrarea nu are o licență activă.\n\nSenzorii pentru **{nr_inmatriculare}** sunt dezactivați până la obținerea unei licențe valide.\n\nPentru a solicita o licență, apasă butonul de mai jos."
     }
   }
 }

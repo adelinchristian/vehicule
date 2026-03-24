@@ -22,6 +22,12 @@ from .const import (
     CONF_PROPRIETAR,
     CONF_RCA_NUMAR_POLITA,
     CONF_SERIE_CIV,
+    CONF_SOFERI,
+    CONF_SOFER_CNP,
+    CONF_SOFER_NUME,
+    CONF_SOFER_NR_PERMIS,
+    CONF_SOFER_CATEGORIE_PERMIS,
+    CONF_SOFER_DATA_EXPIRARE_PERMIS,
     CONF_VIN,
     DOMAIN,
     STRUCTURA_CATEGORII,
@@ -39,6 +45,7 @@ CAMPURI_SENSIBILE: frozenset[str] = frozenset(
         CONF_RCA_NUMAR_POLITA,
         CONF_CASCO_NUMAR_POLITA,
         CONF_PROPRIETAR,
+        CONF_SOFER_NR_PERMIS,
     }
 )
 
@@ -102,6 +109,41 @@ def _structureaza_diagnostic(sursa: dict[str, Any]) -> dict[str, Any]:
     return rezultat
 
 
+def _mascheaza_cnp(cnp: str) -> str:
+    """Maschează CNP-ul, păstrând prima și ultima cifră."""
+    if not cnp or len(cnp) <= 2:
+        return cnp or ""
+    return f"{cnp[:1]}{'*' * (len(cnp) - 2)}{cnp[-1:]}"
+
+
+def _structureaza_soferi(
+    soferi: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Structurează lista de șoferi pentru export diagnostic cu CNP mascat."""
+    if not isinstance(soferi, list):
+        return []
+    rezultat: list[dict[str, Any]] = []
+    for sofer in soferi:
+        if not isinstance(sofer, dict):
+            continue
+        intrare: dict[str, Any] = {}
+        if sofer.get(CONF_SOFER_NUME):
+            intrare["nume"] = sofer[CONF_SOFER_NUME]
+        if sofer.get(CONF_SOFER_CNP):
+            intrare["cnp"] = _mascheaza_cnp(sofer[CONF_SOFER_CNP])
+        if sofer.get(CONF_SOFER_NR_PERMIS):
+            intrare["nr_permis"] = _mascheaza(
+                CONF_SOFER_NR_PERMIS, sofer[CONF_SOFER_NR_PERMIS]
+            )
+        if sofer.get(CONF_SOFER_CATEGORIE_PERMIS):
+            intrare["categorie_permis"] = sofer[CONF_SOFER_CATEGORIE_PERMIS]
+        if sofer.get(CONF_SOFER_DATA_EXPIRARE_PERMIS):
+            intrare["data_expirare_permis"] = sofer[CONF_SOFER_DATA_EXPIRARE_PERMIS]
+        if intrare:
+            rezultat.append(intrare)
+    return rezultat
+
+
 def _structureaza_istoric(
     istoric: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
@@ -136,6 +178,10 @@ async def async_get_config_entry_diagnostics(
     # ── Categorii structurate (cu mascare) ──
     categorii = _structureaza_diagnostic(toate_datele)
 
+    # ── Șoferi ──
+    soferi_raw = toate_datele.get(CONF_SOFERI, [])
+    soferi = _structureaza_soferi(soferi_raw)
+
     # ── Istoric (arhivă) ──
     istoric_raw = toate_datele.get(CONF_ISTORIC, [])
     istoric = _structureaza_istoric(istoric_raw)
@@ -159,6 +205,7 @@ async def async_get_config_entry_diagnostics(
             "domeniu": DOMAIN,
         },
         **categorii,
+        "soferi": soferi,
         "istoric": istoric,
         "stare": {
             "senzori_activi": len(senzori_activi),

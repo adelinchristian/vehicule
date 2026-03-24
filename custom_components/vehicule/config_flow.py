@@ -85,6 +85,12 @@ from .const import (
     CONF_ROVINIETA_DATA_SFARSIT,
     CONF_ROVINIETA_PRET,
     CONF_SERIE_CIV,
+    CONF_SOFERI,
+    CONF_SOFER_NUME,
+    CONF_SOFER_CNP,
+    CONF_SOFER_NR_PERMIS,
+    CONF_SOFER_CATEGORIE_PERMIS,
+    CONF_SOFER_DATA_EXPIRARE_PERMIS,
     CONF_TIP_PROPRIETATE,
     CONF_EXTINCTOR_DATA_EXPIRARE,
     CONF_TRUSA_PRIM_AJUTOR_DATA_EXPIRARE,
@@ -219,6 +225,7 @@ class VehiculeOptionsFlow(config_entries.OptionsFlow):
                 "administrativ",
                 "mentenanta",
                 "kilometraj",
+                "soferi",
                 "licenta",
             ],
         )
@@ -1086,7 +1093,209 @@ class VehiculeOptionsFlow(config_entries.OptionsFlow):
         )
 
     # ─────────────────────────────────────────
-    # 7. Licențiere
+    # 7. Șoferi
+    # ─────────────────────────────────────────
+
+    def _get_soferi(self) -> list[dict[str, Any]]:
+        """Returnează lista de șoferi din options."""
+        return list(self.config_entry.options.get(CONF_SOFERI, []))
+
+    def _save_soferi(self, soferi: list[dict[str, Any]]) -> config_entries.ConfigFlowResult:
+        """Salvează lista de șoferi și închide flow-ul."""
+        optiuni_noi = {**self.config_entry.options, CONF_SOFERI: soferi}
+        self.hass.config_entries.async_update_entry(
+            self.config_entry, options=optiuni_noi,
+        )
+        return self.async_create_entry(data=optiuni_noi)
+
+    async def async_step_soferi(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Meniu șoferi — afișează lista curentă + opțiuni.
+
+        Folosește SelectSelector(mode=LIST) în loc de async_show_menu
+        pentru a permite etichete dinamice cu numele șoferilor existenți
+        (menu_options nu suportă traduceri dinamice).
+        """
+        soferi = self._get_soferi()
+
+        if user_input is not None:
+            actiune = user_input.get("_actiune_sofer", "soferi_adauga")
+            if actiune == "soferi_adauga":
+                return await self.async_step_soferi_adauga()
+            if actiune.startswith("soferi_editeaza_"):
+                try:
+                    idx = int(actiune.replace("soferi_editeaza_", ""))
+                    return await self.async_step_soferi_editeaza(idx=idx)
+                except ValueError:
+                    pass
+            return await self.async_step_soferi_adauga()
+
+        # Construiește lista de opțiuni cu etichete dinamice
+        is_ro = self.hass.config.language == "ro"
+        optiuni: list[selector.SelectOptionDict] = [
+            selector.SelectOptionDict(
+                value="soferi_adauga",
+                label="Adaugă un șofer nou" if is_ro else "Add a new driver",
+            )
+        ]
+        for i, s in enumerate(soferi):
+            fallback = f"Șofer {i + 1}" if is_ro else f"Driver {i + 1}"
+            nume = s.get(CONF_SOFER_NUME, fallback)
+            prefix = "Editare" if is_ro else "Edit"
+            optiuni.append(
+                selector.SelectOptionDict(
+                    value=f"soferi_editeaza_{i}",
+                    label=f"{prefix}: {nume}",
+                )
+            )
+
+        schema = vol.Schema(
+            {
+                vol.Required("_actiune_sofer"): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=optiuni,
+                        mode=selector.SelectSelectorMode.LIST,
+                    )
+                ),
+            }
+        )
+
+        return self.async_show_form(
+            step_id="soferi",
+            data_schema=schema,
+        )
+
+    async def async_step_soferi_adauga(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Formular adăugare șofer nou."""
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            # Validare data expirare permis
+            errors = valideaza_campuri_data(user_input)
+            if not user_input.get(CONF_SOFER_NUME, "").strip():
+                errors["base"] = "sofer_nume_gol"
+            if not errors:
+                sofer_nou = {
+                    CONF_SOFER_NUME: user_input[CONF_SOFER_NUME].strip(),
+                    CONF_SOFER_CNP: user_input.get(CONF_SOFER_CNP, "").strip(),
+                    CONF_SOFER_NR_PERMIS: user_input.get(CONF_SOFER_NR_PERMIS, "").strip(),
+                    CONF_SOFER_CATEGORIE_PERMIS: user_input.get(CONF_SOFER_CATEGORIE_PERMIS, "").strip(),
+                    CONF_SOFER_DATA_EXPIRARE_PERMIS: converteste_date_la_iso(user_input).get(
+                        CONF_SOFER_DATA_EXPIRARE_PERMIS, ""
+                    ),
+                }
+                soferi = self._get_soferi()
+                soferi.append(sofer_nou)
+                return self._save_soferi(soferi)
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_SOFER_NUME): selector.TextSelector(),
+                vol.Optional(CONF_SOFER_CNP): selector.TextSelector(),
+                vol.Optional(CONF_SOFER_NR_PERMIS): selector.TextSelector(),
+                vol.Optional(CONF_SOFER_CATEGORIE_PERMIS): selector.TextSelector(
+                    selector.TextSelectorConfig(suffix="ex: B, B+E, C")
+                ),
+                vol.Optional(CONF_SOFER_DATA_EXPIRARE_PERMIS): _selector_data(),
+            }
+        )
+        return self.async_show_form(
+            step_id="soferi_adauga",
+            data_schema=schema,
+            errors=errors,
+        )
+
+    async def async_step_soferi_editeaza(
+        self, user_input: dict[str, Any] | None = None,
+        *, idx: int | None = None,
+    ) -> config_entries.ConfigFlowResult:
+        """Editare / ștergere șofer existent. idx setat de dispatcher."""
+        if idx is None:
+            idx = getattr(self, "_sofer_edit_idx", 0)
+        else:
+            self._sofer_edit_idx = idx
+
+        soferi = self._get_soferi()
+        if idx >= len(soferi):
+            return self._save_soferi(soferi)
+
+        sofer = soferi[idx]
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            # Butonul de ștergere
+            if user_input.get("_sterge_sofer"):
+                soferi.pop(idx)
+                return self._save_soferi(soferi)
+
+            errors = valideaza_campuri_data(user_input)
+            if not user_input.get(CONF_SOFER_NUME, "").strip():
+                errors["base"] = "sofer_nume_gol"
+            if not errors:
+                soferi[idx] = {
+                    CONF_SOFER_NUME: user_input[CONF_SOFER_NUME].strip(),
+                    CONF_SOFER_CNP: user_input.get(CONF_SOFER_CNP, "").strip(),
+                    CONF_SOFER_NR_PERMIS: user_input.get(CONF_SOFER_NR_PERMIS, "").strip(),
+                    CONF_SOFER_CATEGORIE_PERMIS: user_input.get(CONF_SOFER_CATEGORIE_PERMIS, "").strip(),
+                    CONF_SOFER_DATA_EXPIRARE_PERMIS: converteste_date_la_iso(user_input).get(
+                        CONF_SOFER_DATA_EXPIRARE_PERMIS, ""
+                    ),
+                }
+                return self._save_soferi(soferi)
+
+        from .helpers import format_data_ro
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_SOFER_NUME): selector.TextSelector(),
+                vol.Optional(CONF_SOFER_CNP): selector.TextSelector(),
+                vol.Optional(CONF_SOFER_NR_PERMIS): selector.TextSelector(),
+                vol.Optional(CONF_SOFER_CATEGORIE_PERMIS): selector.TextSelector(
+                    selector.TextSelectorConfig(suffix="ex: B, B+E, C")
+                ),
+                vol.Optional(CONF_SOFER_DATA_EXPIRARE_PERMIS): _selector_data(),
+                vol.Optional("_sterge_sofer"): selector.BooleanSelector(),
+            }
+        )
+
+        valori = {
+            CONF_SOFER_NUME: sofer.get(CONF_SOFER_NUME, ""),
+            CONF_SOFER_CNP: sofer.get(CONF_SOFER_CNP, ""),
+            CONF_SOFER_NR_PERMIS: sofer.get(CONF_SOFER_NR_PERMIS, ""),
+            CONF_SOFER_CATEGORIE_PERMIS: sofer.get(CONF_SOFER_CATEGORIE_PERMIS, ""),
+            CONF_SOFER_DATA_EXPIRARE_PERMIS: format_data_ro(sofer.get(CONF_SOFER_DATA_EXPIRARE_PERMIS, "")),
+        }
+
+        return self.async_show_form(
+            step_id="soferi_editeaza",
+            data_schema=self.add_suggested_values_to_schema(schema, valori),
+            errors=errors,
+            description_placeholders={
+                "sofer_nume": sofer.get(
+                    CONF_SOFER_NUME,
+                    "Șofer" if self.hass.config.language == "ro" else "Driver",
+                )
+            },
+        )
+
+    # Dispatcher-e dinamice: soferi_editeaza_0, soferi_editeaza_1, ...
+    def __getattr__(self, name: str) -> Any:
+        if name.startswith("async_step_soferi_editeaza_"):
+            idx_str = name.replace("async_step_soferi_editeaza_", "")
+            try:
+                idx = int(idx_str)
+            except ValueError:
+                raise AttributeError(name)
+
+            async def _step(user_input: dict[str, Any] | None = None) -> config_entries.ConfigFlowResult:
+                return await self.async_step_soferi_editeaza(user_input, idx=idx)
+            return _step
+        raise AttributeError(name)
+
+    # ─────────────────────────────────────────
+    # 8. Licențiere
     # ─────────────────────────────────────────
     async def async_step_licenta(
         self, user_input: dict[str, Any] | None = None
@@ -1107,12 +1316,15 @@ class VehiculeOptionsFlow(config_entries.OptionsFlow):
 
         # Informații pentru descrierea formularului
         server_status = mgr.status  # 'licensed', 'trial', 'expired', 'unlicensed'
+        is_ro = self.hass.config.language == "ro"
 
         if server_status == "licensed":
             from datetime import datetime
 
-            tip = mgr.license_type or "necunoscut"
-            status_lines = [f"✅ Licență activă ({tip})"]
+            tip = mgr.license_type or ("necunoscut" if is_ro else "unknown")
+            status_lines = [
+                f"✅ {'Licență activă' if is_ro else 'Active license'} ({tip})"
+            ]
 
             if mgr.license_key_masked:
                 status_lines[0] += f" — {mgr.license_key_masked}"
@@ -1122,40 +1334,55 @@ class VehiculeOptionsFlow(config_entries.OptionsFlow):
                 act_date = datetime.fromtimestamp(
                     mgr.activated_at
                 ).strftime("%d.%m.%Y %H:%M")
-                status_lines.append(f"Activată la: {act_date}")
+                lbl = "Activată la" if is_ro else "Activated at"
+                status_lines.append(f"{lbl}: {act_date}")
 
             # Data expirării
             if mgr.license_expires_at:
                 exp_date = datetime.fromtimestamp(
                     mgr.license_expires_at
                 ).strftime("%d.%m.%Y %H:%M")
-                status_lines.append(f"📅 Expiră la: {exp_date}")
+                lbl = "Expiră la" if is_ro else "Expires at"
+                status_lines.append(f"📅 {lbl}: {exp_date}")
             elif tip == "perpetual":
-                status_lines.append("Valabilitate: nelimitată (perpetuă)")
+                status_lines.append(
+                    "Valabilitate: nelimitată (perpetuă)"
+                    if is_ro
+                    else "Validity: unlimited (perpetual)"
+                )
 
             description_placeholders["license_status"] = "\n".join(
                 status_lines
             )
 
         elif server_status == "trial":
-            description_placeholders["license_status"] = (
-                f"⏳ Evaluare — {mgr.trial_days_remaining} zile rămase"
-            )
+            if is_ro:
+                description_placeholders["license_status"] = (
+                    f"⏳ Evaluare — {mgr.trial_days_remaining} zile rămase"
+                )
+            else:
+                description_placeholders["license_status"] = (
+                    f"⏳ Trial — {mgr.trial_days_remaining} days remaining"
+                )
         elif server_status == "expired":
             from datetime import datetime
 
-            status_lines = ["❌ Licență expirată"]
+            status_lines = [
+                "❌ Licență expirată" if is_ro else "❌ License expired"
+            ]
 
             if mgr.activated_at:
                 act_date = datetime.fromtimestamp(
                     mgr.activated_at
                 ).strftime("%d.%m.%Y")
-                status_lines.append(f"Activată la: {act_date}")
+                lbl = "Activată la" if is_ro else "Activated at"
+                status_lines.append(f"{lbl}: {act_date}")
             if mgr.license_expires_at:
                 exp_date = datetime.fromtimestamp(
                     mgr.license_expires_at
                 ).strftime("%d.%m.%Y")
-                status_lines.append(f"Expirată la: {exp_date}")
+                lbl = "Expirată la" if is_ro else "Expired at"
+                status_lines.append(f"{lbl}: {exp_date}")
 
             description_placeholders["license_status"] = "\n".join(
                 status_lines
@@ -1163,6 +1390,8 @@ class VehiculeOptionsFlow(config_entries.OptionsFlow):
         else:
             description_placeholders["license_status"] = (
                 "❌ Fără licență — funcționalitate blocată"
+                if is_ro
+                else "❌ No license — functionality blocked"
             )
 
         if user_input is not None:
@@ -1182,21 +1411,45 @@ class VehiculeOptionsFlow(config_entries.OptionsFlow):
                         persistent_notification,
                     )
 
-                    _LICENSE_TYPE_RO = {
-                        "monthly": "lunară",
-                        "yearly": "anuală",
-                        "perpetual": "perpetuă",
-                        "trial": "evaluare",
+                    _LICENSE_TYPE_LABELS = {
+                        "ro": {
+                            "monthly": "lunară",
+                            "yearly": "anuală",
+                            "perpetual": "perpetuă",
+                            "trial": "evaluare",
+                        },
+                        "en": {
+                            "monthly": "monthly",
+                            "yearly": "yearly",
+                            "perpetual": "perpetual",
+                            "trial": "trial",
+                        },
                     }
-                    tip_ro = _LICENSE_TYPE_RO.get(
-                        mgr.license_type, mgr.license_type or "necunoscut"
+                    lang = "ro" if is_ro else "en"
+                    tip_label = _LICENSE_TYPE_LABELS[lang].get(
+                        mgr.license_type,
+                        mgr.license_type or (
+                            "necunoscut" if is_ro else "unknown"
+                        ),
                     )
+
+                    if is_ro:
+                        notif_msg = (
+                            f"Licența Vehicule a fost activată cu succes! "
+                            f"Tip: {tip_label}."
+                        )
+                        notif_title = "Licență activată"
+                    else:
+                        notif_msg = (
+                            f"Vehicule license activated successfully! "
+                            f"Type: {tip_label}."
+                        )
+                        notif_title = "License activated"
 
                     persistent_notification.async_create(
                         self.hass,
-                        f"Licența Vehicule a fost activată cu succes! "
-                        f"Tip: {tip_ro}.",
-                        title="Licență activată",
+                        notif_msg,
+                        title=notif_title,
                         notification_id="vehicule_license_activated",
                     )
                     return self.async_create_entry(

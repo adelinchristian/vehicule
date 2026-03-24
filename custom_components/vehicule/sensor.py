@@ -28,6 +28,7 @@ Senzori posibili per vehicul:
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from datetime import date
 from typing import Any, Callable
@@ -101,6 +102,12 @@ from .const import (
     CONF_ROVINIETA_DATA_SFARSIT,
     CONF_ROVINIETA_PRET,
     CONF_SERIE_CIV,
+    CONF_SOFERI,
+    CONF_SOFER_CATEGORIE_PERMIS,
+    CONF_SOFER_DATA_EXPIRARE_PERMIS,
+    CONF_SOFER_NUME,
+    CONF_SOFER_CNP,
+    CONF_SOFER_NR_PERMIS,
     CONF_TIP_PROPRIETATE,
     CONF_TRUSA_PRIM_AJUTOR_DATA_EXPIRARE,
     CONF_VIN,
@@ -129,6 +136,156 @@ _LOGGER = logging.getLogger(__name__)
 def _are_valoare(data: dict[str, Any], *chei: str) -> bool:
     """Verifică dacă cel puțin una din chei are o valoare non-goală în date."""
     return any(data.get(k) not in (None, "") for k in chei)
+
+
+# ─────────────────────────────────────────────
+# Traducere atribute (RO → EN)
+# ─────────────────────────────────────────────
+
+# Chei de atribute: RO → EN
+_TRAD_CHEI_EN: dict[str, str] = {
+    # Informații
+    "Nr. înmatriculare": "License plate",
+    "Serie CIV": "CIV serial",
+    "VIN": "VIN",
+    "Marcă": "Make",
+    "Model": "Model",
+    "Motorizare": "Engine type",
+    "Combustibil": "Fuel type",
+    "An fabricație": "Year of manufacture",
+    "An prima înmatriculare": "First registration year",
+    "Capacitate cilindrică (cm³)": "Engine displacement (cm³)",
+    "Putere (kW)": "Power (kW)",
+    "Putere (CP)": "Power (HP)",
+    # Asigurări / documente
+    "Număr poliță": "Policy number",
+    "Companie": "Company",
+    "Data emitere": "Issue date",
+    "Data expirare": "Expiry date",
+    "Data început": "Start date",
+    "Data sfârșit": "End date",
+    "Cost (RON)": "Cost (RON)",
+    "Preț (RON)": "Price (RON)",
+    "Stare": "Status",
+    "Categorie": "Category",
+    "Stație": "Station",
+    "Kilometraj la ITP": "Mileage at ITP",
+    # Administrativ
+    "Sumă (RON)": "Amount (RON)",
+    "Scadență": "Due date",
+    "Localitate": "Locality",
+    "Primărie / localitate": "City hall / locality",
+    "Proprietar": "Owner",
+    "Tip proprietate": "Ownership type",
+    # Mentenanță
+    "Km ultima revizie": "Km at last service",
+    "Km următoarea revizie": "Km at next service",
+    "Data ultima revizie": "Last service date",
+    "Km ultima schimbare": "Km at last replacement",
+    "Km următoarea schimbare": "Km at next replacement",
+    "Data ultima schimbare": "Last replacement date",
+    "Data schimbare": "Replacement date",
+    "Data schimb": "Replacement date",
+    "Km curent": "Current mileage",
+    "Data montare vară": "Summer tires fitting date",
+    "Data montare iarnă": "Winter tires fitting date",
+    "Sezon recomandat": "Recommended season",
+    # Cost total
+    "Total general (RON)": "Grand total (RON)",
+    # Istoric
+    "Reînnoiri anterioare": "Previous renewals",
+    "Ultima arhivare": "Last archival",
+    "Cost total anterior (RON)": "Previous total cost (RON)",
+    # Șoferi
+    "Nume": "Name",
+    "CNP": "Personal ID (CNP)",
+    "Nr. permis": "License number",
+    "Data expirare permis": "License expiry date",
+    "Stare permis": "License status",
+    # Licență necesară
+    "licență": "license",
+    "informații": "information",
+    "nr_inmatriculare": "license_plate",
+}
+
+# Valori fixe: RO → EN
+_TRAD_VALORI_EN: dict[str, str] = {
+    "Expirat": "Expired",
+    "Valid": "Valid",
+    "Vară": "Summer",
+    "Iarnă": "Winter",
+    "necesară": "required",
+    "Licență necesară": "License required",
+    "Fără dată expirare": "No expiry date",
+    "Activați licența pentru a vedea senzorii vehiculului.": (
+        "Activate the license to see the vehicle sensors."
+    ),
+}
+
+# Prefixe dinamice pentru chei de tip „Anterior – X" și „Cost {an}"
+_TRAD_PREFIXE_EN: dict[str, str] = {
+    "Anterior – ": "Previous – ",
+    "Asigurări ": "Insurance ",
+    "Taxe ": "Taxes ",
+    "Mentenanță ": "Maintenance ",
+}
+
+# Unități de măsură: RO → EN
+_TRAD_UOM_EN: dict[str, str] = {
+    "zile": "days",
+    "luni": "months",
+}
+
+
+def _traduce_cheie(cheie: str) -> str:
+    """Traduce o cheie de atribut din RO în EN."""
+    # Cheie exactă
+    if cheie in _TRAD_CHEI_EN:
+        return _TRAD_CHEI_EN[cheie]
+    # Prefixe dinamice (ex: "Anterior – Companie" → "Previous – Company")
+    for prefix_ro, prefix_en in _TRAD_PREFIXE_EN.items():
+        if cheie.startswith(prefix_ro):
+            rest = cheie[len(prefix_ro):]
+            rest_tradus = _TRAD_CHEI_EN.get(rest, rest)
+            return f"{prefix_en}{rest_tradus}"
+    return cheie
+
+
+def _traduce_valoare(valoare: Any) -> Any:
+    """Traduce o valoare fixă (string) din RO în EN."""
+    if isinstance(valoare, str) and valoare in _TRAD_VALORI_EN:
+        return _TRAD_VALORI_EN[valoare]
+    return valoare
+
+
+def _traduce_atribute(
+    hass: HomeAssistant, atribute: dict[str, Any]
+) -> dict[str, Any]:
+    """Traduce cheile și valorile fixe ale atributelor pe baza limbii HA.
+
+    Dacă limba UI este română, returnează atributele neschimbate.
+    Pentru orice altă limbă, se aplică traducerea RO → EN.
+    """
+    if hass.config.language == "ro":
+        return atribute
+    return {
+        _traduce_cheie(k): _traduce_valoare(v)
+        for k, v in atribute.items()
+    }
+
+
+def _traduce_val(hass: HomeAssistant, text: str) -> str:
+    """Traduce o valoare string individuală (native_value, etc.)."""
+    if hass.config.language == "ro":
+        return text
+    return _TRAD_VALORI_EN.get(text, text)
+
+
+def _traduce_uom(hass: HomeAssistant, uom: str | None) -> str | None:
+    """Traduce unitatea de măsură."""
+    if uom is None or hass.config.language == "ro":
+        return uom
+    return _TRAD_UOM_EN.get(uom, uom)
 
 
 # ─────────────────────────────────────────────
@@ -903,11 +1060,29 @@ async def async_setup_entry(
         if desc.key in chei_active
     ]
 
+    # ── Senzori pentru șoferi ──
+    soferi: list[dict[str, Any]] = date_vehicul.get(CONF_SOFERI, [])
+    for i, sofer in enumerate(soferi):
+        if sofer.get(CONF_SOFER_NUME):
+            entitati.append(
+                SoferSensor(
+                    entry=entry,
+                    nr_inmatriculare=nr_inmatriculare,
+                    numar_normalizat=numar_normalizat,
+                    sofer=sofer,
+                    index=i,
+                )
+            )
+
+    # Curățăm senzorii de șoferi orfani (șoferi eliminați)
+    _curata_soferi_orfani(hass, entry, numar_normalizat, soferi)
+
     _LOGGER.debug(
-        "Vehicul %s: %d senzori creați (din %d posibili)",
+        "Vehicul %s: %d senzori creați (din %d posibili) + %d șoferi",
         nr_inmatriculare,
-        len(entitati),
+        len(entitati) - len([s for s in soferi if s.get(CONF_SOFER_NUME)]),
         len(SENSOR_DESCRIPTIONS),
+        len([s for s in soferi if s.get(CONF_SOFER_NUME)]),
     )
 
     async_add_entities(entitati, update_before_add=True)
@@ -939,6 +1114,40 @@ def _curata_entitati_orfane(
             registru.async_remove(entitate)
 
 
+def _curata_soferi_orfani(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    numar_normalizat: str,
+    soferi: list[dict[str, Any]],
+) -> None:
+    """Elimină din Entity Registry senzorii de șoferi care nu mai există.
+
+    Generează slug-urile active din lista curentă de șoferi și elimină
+    orice entitate `vehicule_{numar}_sofer_*` care nu se regăsește.
+    """
+    registru = er.async_get(hass)
+
+    # Construim setul de unique_id-uri valide
+    sluguri_active: set[str] = set()
+    for i, sofer in enumerate(soferi):
+        nume = sofer.get(CONF_SOFER_NUME, "")
+        if not nume:
+            continue
+        slug = re.sub(r"[^a-z0-9]", "_", nume.lower()).strip("_") or f"sofer_{i}"
+        sluguri_active.add(f"vehicule_{numar_normalizat}_sofer_{slug}")
+
+    prefix = f"vehicule_{numar_normalizat}_sofer_"
+    for entitate in er.async_entries_for_config_entry(registru, entry.entry_id):
+        if entitate.unique_id and entitate.unique_id.startswith(prefix):
+            if entitate.unique_id not in sluguri_active:
+                _LOGGER.debug(
+                    "Elimin senzor șofer orfan: %s (unique_id: %s)",
+                    entitate.entity_id,
+                    entitate.unique_id,
+                )
+                registru.async_remove(entitate.entity_id)
+
+
 # ─────────────────────────────────────────────
 # Entitate senzor
 # ─────────────────────────────────────────────
@@ -968,6 +1177,13 @@ class VehiculeSensor(SensorEntity):
         # ID unic: vehicule_{numar_normalizat}_{tip_senzor}
         self._attr_unique_id = f"vehicule_{numar_normalizat}_{description.key}"
 
+        # Forțăm entity_id cu prefix "vehicule_" indiferent de numele
+        # dispozitivului (previne pierderea prefixului dacă userul
+        # redenumește device-ul din UI-ul Home Assistant)
+        self.entity_id = (
+            f"sensor.vehicule_{numar_normalizat}_{description.key}"
+        )
+
     @property
     def device_info(self) -> DeviceInfo:
         """Informații despre dispozitiv (vehiculul)."""
@@ -990,22 +1206,33 @@ class VehiculeSensor(SensorEntity):
         return mgr.is_valid
 
     @property
+    def native_unit_of_measurement(self) -> str | None:
+        """Unitatea de măsură, tradusă pe baza limbii HA."""
+        uom = self.entity_description.native_unit_of_measurement
+        return _traduce_uom(self.hass, uom)
+
+    @property
     def native_value(self) -> Any:
         """Returnează starea senzorului."""
         if not self._license_valid:
-            return "Licență necesară"
+            return _traduce_val(self.hass, "Licență necesară")
         if self.entity_description.value_fn is None:
             return None
-        return self.entity_description.value_fn(self._date_vehicul)
+        val = self.entity_description.value_fn(self._date_vehicul)
+        if isinstance(val, str):
+            return _traduce_val(self.hass, val)
+        return val
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Returnează atributele suplimentare ale senzorului."""
+        """Returnează atributele suplimentare ale senzorului, traduse."""
         if not self._license_valid:
-            return {"licență": "necesară"}
+            return _traduce_atribute(self.hass, {"licență": "necesară"})
         if self.entity_description.attributes_fn is None:
             return {}
-        return self.entity_description.attributes_fn(self._date_vehicul)
+        return _traduce_atribute(
+            self.hass, self.entity_description.attributes_fn(self._date_vehicul)
+        )
 
 
 class LicentaNecesaraSensor(SensorEntity):
@@ -1025,6 +1252,7 @@ class LicentaNecesaraSensor(SensorEntity):
         self._attr_unique_id = f"vehicule_licenta_{numar_normalizat}"
         self._attr_name = "Licență necesară"
         self._attr_icon = "mdi:license"
+        self.entity_id = f"sensor.vehicule_licenta_{numar_normalizat}"
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -1036,11 +1264,103 @@ class LicentaNecesaraSensor(SensorEntity):
 
     @property
     def native_value(self) -> str:
-        return "Licență necesară"
+        return _traduce_val(self.hass, "Licență necesară")
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return {
+        return _traduce_atribute(self.hass, {
             "nr_inmatriculare": self._nr_inmatriculare,
             "informații": "Activați licența pentru a vedea senzorii vehiculului.",
-        }
+        })
+
+
+class SoferSensor(SensorEntity):
+    """Senzor dedicat pentru un șofer asociat vehiculului.
+
+    Afișează zilele rămase până la expirarea permisului.
+    Atribute: nume, CNP (mascat), nr. permis, categorie, data expirare, stare.
+    """
+
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        entry: ConfigEntry,
+        nr_inmatriculare: str,
+        numar_normalizat: str,
+        sofer: dict[str, Any],
+        index: int,
+    ) -> None:
+        self._entry = entry
+        self._nr_inmatriculare = nr_inmatriculare
+        self._numar_normalizat = numar_normalizat
+        self._sofer = sofer
+        self._index = index
+
+        # Generăm un slug stabil din numele șoferului
+        slug = re.sub(r"[^a-z0-9]", "_", sofer.get(CONF_SOFER_NUME, "").lower()).strip("_") or f"sofer_{index}"
+        self._attr_unique_id = f"vehicule_{numar_normalizat}_sofer_{slug}"
+        self._attr_name = f"Șofer — {sofer.get(CONF_SOFER_NUME, 'Necunoscut')}"
+        self._attr_icon = "mdi:card-account-details"
+        self.entity_id = f"sensor.vehicule_{numar_normalizat}_sofer_{slug}"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return DeviceInfo(
+            identifiers={(DOMAIN, self._numar_normalizat)},
+            name=f"Vehicule {self._nr_inmatriculare}",
+            entry_type=None,
+        )
+
+    @property
+    def _license_valid(self) -> bool:
+        mgr = self.hass.data.get(DOMAIN, {}).get(LICENSE_DATA_KEY)
+        if mgr is None:
+            return False
+        return mgr.is_valid
+
+    @property
+    def native_value(self) -> Any:
+        if not self._license_valid:
+            return _traduce_val(self.hass, "Licență necesară")
+        data_exp = self._sofer.get(CONF_SOFER_DATA_EXPIRARE_PERMIS)
+        if not data_exp:
+            return _traduce_val(self.hass, "Fără dată expirare")
+        zile = zile_ramase(data_exp)
+        if zile is None:
+            return _traduce_val(self.hass, "Fără dată expirare")
+        return zile
+
+    @property
+    def native_unit_of_measurement(self) -> str | None:
+        if not self._license_valid:
+            return None
+        data_exp = self._sofer.get(CONF_SOFER_DATA_EXPIRARE_PERMIS)
+        if data_exp and zile_ramase(data_exp) is not None:
+            return _traduce_uom(self.hass, "zile")
+        return None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        if not self._license_valid:
+            return _traduce_atribute(self.hass, {"licență": "necesară"})
+
+        s = self._sofer
+        cnp = s.get(CONF_SOFER_CNP, "")
+        cnp_mascat = f"{cnp[:1]}{'*' * (len(cnp) - 2)}{cnp[-1:]}" if len(cnp) > 2 else cnp
+
+        attrs: dict[str, Any] = {}
+        if s.get(CONF_SOFER_NUME):
+            attrs["Nume"] = s[CONF_SOFER_NUME]
+        if cnp:
+            attrs["CNP"] = cnp_mascat
+        if s.get(CONF_SOFER_NR_PERMIS):
+            attrs["Nr. permis"] = s[CONF_SOFER_NR_PERMIS]
+        if s.get(CONF_SOFER_CATEGORIE_PERMIS):
+            attrs["Categorie"] = s[CONF_SOFER_CATEGORIE_PERMIS]
+        data_exp = s.get(CONF_SOFER_DATA_EXPIRARE_PERMIS)
+        if data_exp:
+            attrs["Data expirare permis"] = format_data_ro(data_exp)
+            attrs["Stare permis"] = stare_document(data_exp)
+
+        return _traduce_atribute(self.hass, attrs)
