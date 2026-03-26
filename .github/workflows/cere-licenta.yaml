@@ -74,8 +74,11 @@ jobs:
               const apiUrl = process.env.LICENSE_API_URL;
               const adminKey = process.env.LICENSE_ADMIN_KEY;
               if (apiUrl && adminKey) {
+                console.log(`DEBUG: API URL = "${apiUrl}", key length = ${adminKey.length}, key starts = "${adminKey.substring(0,4)}...", key ends = "...${adminKey.substring(adminKey.length-4)}"`);
+                const targetUrl = `${apiUrl}/license/v2/github/register-request`;
+                console.log(`DEBUG: POST → ${targetUrl}`);
                 try {
-                  const resp = await fetch(`${apiUrl}/license/v2/github/register-request`, {
+                  const resp = await fetch(targetUrl, {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
@@ -93,7 +96,8 @@ jobs:
                   if (resp.ok) {
                     console.log('Cerere înregistrată pe serverul de licențe');
                   } else {
-                    console.log(`Eroare înregistrare cerere: ${resp.status}`);
+                    const errBody = await resp.text();
+                    console.log(`Eroare înregistrare cerere: ${resp.status} — ${errBody}`);
                   }
                 } catch (e) {
                   console.log(`Nu s-a putut contacta serverul de licențe: ${e.message}`);
