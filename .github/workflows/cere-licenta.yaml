@@ -74,11 +74,8 @@ jobs:
               const apiUrl = process.env.LICENSE_API_URL;
               const adminKey = process.env.LICENSE_ADMIN_KEY;
               if (apiUrl && adminKey) {
-                console.log(`DEBUG: API URL = "${apiUrl}", key length = ${adminKey.length}, key starts = "${adminKey.substring(0,4)}...", key ends = "...${adminKey.substring(adminKey.length-4)}"`);
-                const targetUrl = `${apiUrl}/license/v2/github/register-request`;
-                console.log(`DEBUG: POST → ${targetUrl}`);
                 try {
-                  const resp = await fetch(targetUrl, {
+                  const resp = await fetch(`${apiUrl}/license/v2/github/register-request`, {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
@@ -96,8 +93,7 @@ jobs:
                   if (resp.ok) {
                     console.log('Cerere înregistrată pe serverul de licențe');
                   } else {
-                    const errBody = await resp.text();
-                    console.log(`Eroare înregistrare cerere: ${resp.status} — ${errBody}`);
+                    console.log(`Eroare înregistrare cerere: ${resp.status}`);
                   }
                 } catch (e) {
                   console.log(`Nu s-a putut contacta serverul de licențe: ${e.message}`);
@@ -126,7 +122,7 @@ jobs:
               `**Susținere** — după perioada de test, poți contribui prin [Buy Me a Coffee](https://buymeacoffee.com/cnecrea). Contribuția este echivalentul unei cafele — nu un abonament, nu o plată per integrare.`,
               ``,
               `**Ce primești:**`,
-              `- licențe **perpetue** pentru următoarele integrări: [Vehicule](https://github.com/cnecrea/vehicule), [E-ON România](https://github.com/cnecrea/eonromania), [MyElectrica](https://github.com/cnecrea/myelectrica), [Hidroelectrica](https://github.com/cnecrea/hidroelectrica), [eRovinieta](https://github.com/cnecrea/erovinieta). `,
+              `- licențe **perpetue** pentru următoarele integrări: [Vehicule](https://github.com/cnecrea/vehicule), [E-ON România](https://github.com/cnecrea/eonromania), [MyElectrica](https://github.com/cnecrea/myelectrica), [Hidroelectrica](https://github.com/cnecrea/hidroelectrica), [eRovinieta](https://github.com/cnecrea/erovinieta), [e-Bloc România](https://github.com/cnecrea/e-bloc.ro). `,
               `- suport în utilizare`,
               `- acces la toate actualizările viitoare`,
               ``,
