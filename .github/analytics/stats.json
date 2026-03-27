@@ -1,7 +1,7 @@
 {
   "repo": "",
   "prima_colectare": "",
-  "ultima_actualizare": "2026-03-26T06:54:42Z",
+  "ultima_actualizare": "2026-03-27T06:54:16Z",
   "zilnic": {
     "2026-03-01": {
       "clones_total": 0,
@@ -601,11 +601,64 @@
           "vizitatori_unici": 1
         }
       ]
+    },
+    "2026-03-27": {
+      "stars": 8,
+      "forks": 0,
+      "watchers": 0,
+      "open_issues": 1,
+      "referrers": [
+        {
+          "sursa": "github.com",
+          "vizite": 141,
+          "vizitatori_unici": 59
+        },
+        {
+          "sursa": "m.facebook.com",
+          "vizite": 105,
+          "vizitatori_unici": 75
+        },
+        {
+          "sursa": "lm.facebook.com",
+          "vizite": 73,
+          "vizitatori_unici": 55
+        },
+        {
+          "sursa": "l.facebook.com",
+          "vizite": 40,
+          "vizitatori_unici": 32
+        },
+        {
+          "sursa": "facebook.com",
+          "vizite": 15,
+          "vizitatori_unici": 12
+        },
+        {
+          "sursa": "buymeacoffee.com",
+          "vizite": 5,
+          "vizitatori_unici": 2
+        },
+        {
+          "sursa": "statics.teams.cdn.office.net",
+          "vizite": 3,
+          "vizitatori_unici": 1
+        },
+        {
+          "sursa": "Google",
+          "vizite": 2,
+          "vizitatori_unici": 1
+        },
+        {
+          "sursa": "hubinteligent.org",
+          "vizite": 1,
+          "vizitatori_unici": 1
+        }
+      ]
     }
   },
   "releases": {
-    "1.8.0": 0,
-    "1.7.0": 0,
-    "1.6.0": 0
+    "1.8.0": 1,
+    "1.7.0": 1,
+    "1.6.0": 1
   }
 }
