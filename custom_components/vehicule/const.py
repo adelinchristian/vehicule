@@ -364,7 +364,7 @@ STRUCTURA_CATEGORII: Final = [
 # ─────────────────────────────────────────────
 CONF_LICENSE_KEY: Final = "license_key"
 LICENSE_DATA_KEY: Final = "vehicule_license_manager"
-LICENSE_PURCHASE_URL: Final = "https://github.com/cnecrea/vehicule/issues"
+LICENSE_PURCHASE_URL: Final = "https://hubinteligent.org/licenta/vehicule"
 
 
 def normalizeaza_numar(numar: str) -> str:
