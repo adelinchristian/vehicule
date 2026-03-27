@@ -1215,7 +1215,7 @@ class VehiculeSensor(SensorEntity):
     def native_value(self) -> Any:
         """Returnează starea senzorului."""
         if not self._license_valid:
-            return _traduce_val(self.hass, "Licență necesară")
+            return None
         if self.entity_description.value_fn is None:
             return None
         val = self.entity_description.value_fn(self._date_vehicul)
@@ -1227,7 +1227,7 @@ class VehiculeSensor(SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         """Returnează atributele suplimentare ale senzorului, traduse."""
         if not self._license_valid:
-            return _traduce_atribute(self.hass, {"licență": "necesară"})
+            return {}
         if self.entity_description.attributes_fn is None:
             return {}
         return _traduce_atribute(
@@ -1236,7 +1236,11 @@ class VehiculeSensor(SensorEntity):
 
 
 class LicentaNecesaraSensor(SensorEntity):
-    """Senzor afișat DOAR când licența nu este validă."""
+    """Senzor afișat DOAR când licența nu este validă.
+
+    Oferă informații de diagnostic utile: status curent, zile trial
+    rămase (dacă există), și instrucțiuni de activare.
+    """
 
     _attr_has_entity_name = True
 
@@ -1264,14 +1268,37 @@ class LicentaNecesaraSensor(SensorEntity):
 
     @property
     def native_value(self) -> str:
+        mgr = self.hass.data.get(DOMAIN, {}).get(LICENSE_DATA_KEY)
+        if mgr is not None:
+            status = mgr.status
+            if status == "expired":
+                return _traduce_val(self.hass, "Licență expirată")
+            if status == "trial":
+                days = mgr.trial_days_remaining
+                return _traduce_val(
+                    self.hass,
+                    f"Trial — {days} zile rămase" if days > 0 else "Trial expirat",
+                )
         return _traduce_val(self.hass, "Licență necesară")
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return _traduce_atribute(self.hass, {
+        attrs: dict[str, Any] = {
             "nr_inmatriculare": self._nr_inmatriculare,
-            "informații": "Activați licența pentru a vedea senzorii vehiculului.",
-        })
+        }
+        mgr = self.hass.data.get(DOMAIN, {}).get(LICENSE_DATA_KEY)
+        if mgr is not None:
+            attrs["status_licență"] = mgr.status
+            if mgr.status == "trial":
+                attrs["zile_trial_rămase"] = mgr.trial_days_remaining
+            attrs["informații"] = (
+                "Activați o cheie de licență din Setări → Dispozitive → Vehicule."
+            )
+        else:
+            attrs["informații"] = (
+                "Managerul de licențe nu este disponibil."
+            )
+        return _traduce_atribute(self.hass, attrs)
 
 
 class SoferSensor(SensorEntity):
@@ -1322,7 +1349,7 @@ class SoferSensor(SensorEntity):
     @property
     def native_value(self) -> Any:
         if not self._license_valid:
-            return _traduce_val(self.hass, "Licență necesară")
+            return None
         data_exp = self._sofer.get(CONF_SOFER_DATA_EXPIRARE_PERMIS)
         if not data_exp:
             return _traduce_val(self.hass, "Fără dată expirare")
@@ -1343,7 +1370,7 @@ class SoferSensor(SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         if not self._license_valid:
-            return _traduce_atribute(self.hass, {"licență": "necesară"})
+            return {}
 
         s = self._sofer
         cnp = s.get(CONF_SOFER_CNP, "")

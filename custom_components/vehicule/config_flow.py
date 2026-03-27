@@ -29,6 +29,7 @@ from .const import (
     CONF_AN_FABRICATIE,
     CONF_LICENSE_KEY,
     LICENSE_DATA_KEY,
+    LICENSE_PURCHASE_URL,
     CONF_AN_PRIMA_INMATRICULARE,
     CONF_ANVELOPE_COST,
     CONF_ANVELOPE_IARNA_DATA,
@@ -1111,59 +1112,27 @@ class VehiculeOptionsFlow(config_entries.OptionsFlow):
     async def async_step_soferi(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
-        """Meniu șoferi — afișează lista curentă + opțiuni.
+        """Sub-meniu șoferi — analog cu mentenanță.
 
-        Folosește SelectSelector(mode=LIST) în loc de async_show_menu
-        pentru a permite etichete dinamice cu numele șoferilor existenți
-        (menu_options nu suportă traduceri dinamice).
+        Folosește async_show_menu cu dict menu_options pentru
+        etichete dinamice (numele șoferilor existenți).
         """
         soferi = self._get_soferi()
-
-        if user_input is not None:
-            actiune = user_input.get("_actiune_sofer", "soferi_adauga")
-            if actiune == "soferi_adauga":
-                return await self.async_step_soferi_adauga()
-            if actiune.startswith("soferi_editeaza_"):
-                try:
-                    idx = int(actiune.replace("soferi_editeaza_", ""))
-                    return await self.async_step_soferi_editeaza(idx=idx)
-                except ValueError:
-                    pass
-            return await self.async_step_soferi_adauga()
-
-        # Construiește lista de opțiuni cu etichete dinamice
         is_ro = self.hass.config.language == "ro"
-        optiuni: list[selector.SelectOptionDict] = [
-            selector.SelectOptionDict(
-                value="soferi_adauga",
-                label="Adaugă un șofer nou" if is_ro else "Add a new driver",
-            )
-        ]
+
+        # Construiește dict de opțiuni: cheie = step_id, valoare = etichetă
+        menu_opts: dict[str, str] = {
+            "soferi_adauga": "Adaugă un șofer nou" if is_ro else "Add a new driver",
+        }
         for i, s in enumerate(soferi):
             fallback = f"Șofer {i + 1}" if is_ro else f"Driver {i + 1}"
             nume = s.get(CONF_SOFER_NUME, fallback)
             prefix = "Editare" if is_ro else "Edit"
-            optiuni.append(
-                selector.SelectOptionDict(
-                    value=f"soferi_editeaza_{i}",
-                    label=f"{prefix}: {nume}",
-                )
-            )
+            menu_opts[f"soferi_editeaza_{i}"] = f"{prefix}: {nume}"
 
-        schema = vol.Schema(
-            {
-                vol.Required("_actiune_sofer"): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=optiuni,
-                        mode=selector.SelectSelectorMode.LIST,
-                    )
-                ),
-            }
-        )
-
-        return self.async_show_form(
+        return self.async_show_menu(
             step_id="soferi",
-            data_schema=schema,
+            menu_options=menu_opts,
         )
 
     async def async_step_soferi_adauga(
@@ -1356,20 +1325,29 @@ class VehiculeOptionsFlow(config_entries.OptionsFlow):
             )
 
         elif server_status == "trial":
+            days = mgr.trial_days_remaining
             if is_ro:
-                description_placeholders["license_status"] = (
-                    f"⏳ Evaluare — {mgr.trial_days_remaining} zile rămase"
-                )
+                status_lines = [
+                    f"⏳ Evaluare — {days} zile rămase",
+                    "",
+                    f"🛒 Obține licență: {LICENSE_PURCHASE_URL}",
+                ]
             else:
-                description_placeholders["license_status"] = (
-                    f"⏳ Trial — {mgr.trial_days_remaining} days remaining"
-                )
+                status_lines = [
+                    f"⏳ Trial — {days} days remaining",
+                    "",
+                    f"🛒 Get a license: {LICENSE_PURCHASE_URL}",
+                ]
+            description_placeholders["license_status"] = "\n".join(
+                status_lines
+            )
         elif server_status == "expired":
             from datetime import datetime
 
-            status_lines = [
-                "❌ Licență expirată" if is_ro else "❌ License expired"
-            ]
+            if is_ro:
+                status_lines = ["❌ Licență expirată"]
+            else:
+                status_lines = ["❌ License expired"]
 
             if mgr.activated_at:
                 act_date = datetime.fromtimestamp(
@@ -1384,14 +1362,34 @@ class VehiculeOptionsFlow(config_entries.OptionsFlow):
                 lbl = "Expirată la" if is_ro else "Expired at"
                 status_lines.append(f"{lbl}: {exp_date}")
 
+            status_lines.append("")
+            if is_ro:
+                status_lines.append(
+                    f"🛒 Obține licență: {LICENSE_PURCHASE_URL}"
+                )
+            else:
+                status_lines.append(
+                    f"🛒 Get a license: {LICENSE_PURCHASE_URL}"
+                )
+
             description_placeholders["license_status"] = "\n".join(
                 status_lines
             )
         else:
-            description_placeholders["license_status"] = (
-                "❌ Fără licență — funcționalitate blocată"
-                if is_ro
-                else "❌ No license — functionality blocked"
+            if is_ro:
+                status_lines = [
+                    "❌ Fără licență — funcționalitate blocată",
+                    "",
+                    f"🛒 Obține licență: {LICENSE_PURCHASE_URL}",
+                ]
+            else:
+                status_lines = [
+                    "❌ No license — functionality blocked",
+                    "",
+                    f"🛒 Get a license: {LICENSE_PURCHASE_URL}",
+                ]
+            description_placeholders["license_status"] = "\n".join(
+                status_lines
             )
 
         if user_input is not None:

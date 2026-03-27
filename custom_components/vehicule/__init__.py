@@ -19,7 +19,11 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.event import (
+    async_track_point_in_time,
+    async_track_time_interval,
+)
+from homeassistant.util import dt as dt_util
 
 from .const import (
     BACKUP_VERSION,
@@ -101,16 +105,63 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
 
         async def _heartbeat_periodic(_now) -> None:
-            """Verifică statusul la server dacă cache-ul a expirat."""
+            """Verifică statusul la server dacă cache-ul a expirat.
+
+            Logică:
+            1. Captează is_valid ÎNAINTE de heartbeat
+            2. Dacă cache expirat → contactează serverul
+            3. Captează is_valid DUPĂ heartbeat
+            4. Dacă starea s-a schimbat → reload entries (tranziție curată)
+            5. Reprogramează heartbeat-ul la intervalul actualizat de server
+            """
             mgr: LicenseManager | None = hass.data.get(DOMAIN, {}).get(
                 LICENSE_DATA_KEY
             )
             if not mgr:
                 _LOGGER.debug("[Vehicule] Heartbeat: LicenseManager nu există, skip")
                 return
+
+            # Captează starea ÎNAINTE de heartbeat
+            was_valid = mgr.is_valid
+
             if mgr.needs_heartbeat:
                 _LOGGER.debug("[Vehicule] Heartbeat: cache expirat, verific la server")
                 await mgr.async_heartbeat()
+
+                # Captează starea DUPĂ heartbeat
+                now_valid = mgr.is_valid
+
+                # Detectează tranziții pe care async_check_status nu le-a prins
+                # (ex: server inaccesibil + cache expirat → is_valid devine False)
+                if was_valid and not now_valid:
+                    _LOGGER.warning(
+                        "[Vehicule] Licența a devenit invalidă — reîncarc senzorii"
+                    )
+                    await mgr._async_reload_entries()
+                elif not was_valid and now_valid:
+                    _LOGGER.info(
+                        "[Vehicule] Licența a redevenit validă — reîncarc senzorii"
+                    )
+                    await mgr._async_reload_entries()
+
+                # Reprogramează heartbeat-ul la intervalul actualizat de server
+                new_interval = mgr.check_interval_seconds
+                _LOGGER.debug(
+                    "[Vehicule] Heartbeat: reprogramez la %d secunde (%d min)",
+                    new_interval,
+                    new_interval // 60,
+                )
+                # Oprește vechiul timer
+                cancel_old = hass.data.get(DOMAIN, {}).get("_cancel_heartbeat")
+                if cancel_old:
+                    cancel_old()
+                # Programează noul timer cu intervalul actualizat
+                cancel_new = async_track_time_interval(
+                    hass,
+                    _heartbeat_periodic,
+                    timedelta(seconds=new_interval),
+                )
+                hass.data[DOMAIN]["_cancel_heartbeat"] = cancel_new
             else:
                 _LOGGER.debug("[Vehicule] Heartbeat: cache valid, nu e nevoie de verificare")
 
@@ -121,6 +172,70 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         hass.data[DOMAIN]["_cancel_heartbeat"] = cancel_heartbeat
         _LOGGER.debug("[Vehicule] Heartbeat programat și stocat în hass.data")
+
+        # ── Timer precis la valid_until (zero gap la expirare cache) ──
+        def _schedule_cache_expiry_check(mgr_ref: LicenseManager) -> None:
+            """Programează un check EXACT la momentul expirării cache-ului.
+
+            Elimină complet fereastra dintre expirarea cache-ului și
+            următorul heartbeat periodic. La expirare, contactează
+            serverul imediat și declanșează reload dacă starea se schimbă.
+            """
+            # Anulează timer-ul anterior (dacă există)
+            cancel_prev = hass.data.get(DOMAIN, {}).pop(
+                "_cancel_cache_expiry", None
+            )
+            if cancel_prev:
+                cancel_prev()
+
+            valid_until = (mgr_ref._status_token or {}).get("valid_until")
+            if not valid_until or valid_until <= 0:
+                return
+
+            expiry_dt = dt_util.utc_from_timestamp(valid_until)
+            # Adaugă 2 secunde ca marjă (evită race condition cu cache check)
+            expiry_dt = expiry_dt + timedelta(seconds=2)
+
+            async def _on_cache_expiry(_now) -> None:
+                """Callback executat EXACT la expirarea cache-ului."""
+                mgr_now: LicenseManager | None = hass.data.get(
+                    DOMAIN, {}
+                ).get(LICENSE_DATA_KEY)
+                if not mgr_now:
+                    return
+
+                was_valid = mgr_now.is_valid
+                _LOGGER.debug(
+                    "[Vehicule] Cache expirat — verific imediat la server"
+                )
+                await mgr_now.async_check_status()
+                now_valid = mgr_now.is_valid
+
+                if was_valid != now_valid:
+                    if now_valid:
+                        _LOGGER.info(
+                            "[Vehicule] Licența a redevenit validă — reîncarc"
+                        )
+                    else:
+                        _LOGGER.warning(
+                            "[Vehicule] Licența a devenit invalidă — reîncarc"
+                        )
+                    await mgr_now._async_reload_entries()
+
+                # Programează următorul check (dacă serverul a dat valid_until nou)
+                _schedule_cache_expiry_check(mgr_now)
+
+            cancel_expiry = async_track_point_in_time(
+                hass, _on_cache_expiry, expiry_dt
+            )
+            hass.data[DOMAIN]["_cancel_cache_expiry"] = cancel_expiry
+
+            _LOGGER.debug(
+                "[Vehicule] Cache expiry timer programat la %s",
+                expiry_dt.isoformat(),
+            )
+
+        _schedule_cache_expiry_check(license_mgr)
 
         # ── Notificare re-enable (dacă a fost dezactivată anterior) ──
         was_disabled = hass.data.pop(f"{DOMAIN}_was_disabled", False)
@@ -180,7 +295,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.debug("[Vehicule] Entry %s eliminat din hass.data", entry.entry_id)
 
         # Verifică dacă mai sunt entry-uri active (ignoră cheile interne)
-        chei_interne = {LICENSE_DATA_KEY, "_cancel_heartbeat"}
+        chei_interne = {LICENSE_DATA_KEY, "_cancel_heartbeat", "_cancel_cache_expiry"}
         entry_ids_ramase = {
             k for k in hass.data.get(DOMAIN, {})
             if k not in chei_interne
@@ -223,6 +338,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             if cancel_hb:
                 cancel_hb()
                 _LOGGER.debug("[Vehicule] Heartbeat periodic oprit")
+
+            # Oprește timer-ul de cache expiry
+            cancel_ce = hass.data[DOMAIN].pop("_cancel_cache_expiry", None)
+            if cancel_ce:
+                cancel_ce()
+                _LOGGER.debug("[Vehicule] Cache expiry timer oprit")
 
             # Elimină LicenseManager
             hass.data[DOMAIN].pop(LICENSE_DATA_KEY, None)

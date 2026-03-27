@@ -231,8 +231,8 @@
       "soferi": {
         "title": "Șoferi",
         "description": "Gestionați șoferii vehiculului. Alegeți o acțiune.",
-        "data": {
-          "_actiune_sofer": "Acțiune"
+        "menu_options": {
+          "soferi_adauga": "Adaugă un șofer nou"
         }
       },
       "soferi_adauga": {

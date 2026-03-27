@@ -231,8 +231,8 @@
       "soferi": {
         "title": "Drivers",
         "description": "Manage vehicle drivers. Choose an action.",
-        "data": {
-          "_actiune_sofer": "Action"
+        "menu_options": {
+          "soferi_adauga": "Add a new driver"
         }
       },
       "soferi_adauga": {
