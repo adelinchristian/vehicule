@@ -275,7 +275,7 @@ automation:
             - if:
                 - condition: template
                   value_template: >
-                    {{ val not in ['unknown', 'unavailable'] and val | int(999) < repeat.item.prag }}
+                    {{ val not in ['unknown','unavailable'] and val | int(999) in [10, 3] }}
               then:
                 - action: notify.mobile_app
                   data:
