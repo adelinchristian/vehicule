@@ -92,6 +92,15 @@ Dacă modifici setările integrării (Options flow):
 [custom_components.vehicule.sensor] Creez senzorii pentru vehiculul: B123ABC
 ```
 
+### Licență — heartbeat
+Verificarea periodică a licenței cu serverul:
+
+```
+[LICENSE] Heartbeat OK. Licența este validă (expiră: 2027-01-15).
+```
+
+**Explicație**: Verificarea automată a licenței a reușit. Comportament normal.
+
 ---
 
 ## Situații de eroare
@@ -127,6 +136,19 @@ Dacă modifici setările integrării (Options flow):
 **Ce trebuie verificat:**
 - Verifică dacă vehiculul este încă configurat
 - Poți reconecta integrarea dacă este necesar
+
+### Licență invalidă
+
+**Scenariu:** Licența a expirat, cheia este greșită, sau serverul de licențe nu este accesibil
+```
+[LICENSE] Licența nu este validă. Motiv: expired / invalid_key / server_unreachable.
+[custom_components.vehicule] Licență invalidă — se creează doar LicentaNecesaraSensor.
+```
+
+**Ce trebuie verificat:**
+1. Verifică cheia de licență în OptionsFlow
+2. Dacă a expirat, reînnoiește de la [hubinteligent.org/licenta/vehicule](https://hubinteligent.org/licenta/vehicule)
+3. Dacă serverul nu e accesibil, există un grace period — licența rămâne validă temporar
 
 ### Erori generale
 

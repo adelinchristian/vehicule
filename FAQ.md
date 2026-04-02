@@ -77,6 +77,27 @@ Exemplu: pentru 15 martie 2026, scrieți `15.03.2026`
 ### Trebuie setat kilometrajul înainte de ITP și mentenanță?
 Da. Începând cu versiunea 1.1.0, pașii **ITP**, **Revizie ulei**, **Distribuție** și **Frâne** necesită ca kilometrajul curent să fie configurat. Dacă nu este setat, formularul afișează o eroare și trebuie mai întâi să accesați **Actualizare kilometraj** din meniul principal.
 
+### Ce e licența și de ce am nevoie de ea?
+Integrarea folosește un sistem de licențiere server-side (v3.3) cu semnături Ed25519 și HMAC-SHA256. Fără o licență validă, integrarea afișează doar senzorul „Licență necesară" și nu creează senzori funcționali.
+
+Licența se achiziționează de la: [hubinteligent.org/licenta/vehicule](https://hubinteligent.org/licenta/vehicule)
+
+După achiziție, introdu cheia de licență din OptionsFlow:
+1. **Setări** → **Dispozitive și Servicii** → **Vehicule** → **Configurare**
+2. Selectează **Licență**
+3. Completează câmpul „Cheie licență"
+4. Salvează
+
+### Am introdus licența dar senzorii tot arată „Licență necesară". De ce?
+Câteva cauze posibile:
+
+1. **Licența nu a fost validată** — verifică logurile pentru mesaje cu `LICENSE`
+2. **Serverul de licențe nu este accesibil** — dacă HA nu are acces la internet, validarea eșuează
+3. **Cheie greșită** — verifică că ai copiat cheia corect, fără spații suplimentare
+4. **Restartare necesară** — în rare cazuri, un restart al HA poate rezolva problema
+
+Activează debug logging ([DEBUG.md](DEBUG.md)) și caută mesaje legate de licență.
+
 ---
 
 ## 3. Senzori

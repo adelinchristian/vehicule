@@ -18,6 +18,7 @@ Pentru o demonstrație completă a procesului de instalare și configurare, urm�
 
 - Home Assistant **2025.11.0** sau mai nou
 - **HACS** (opțional, pentru instalare simplificată)
+- **Licență** validă — de la [hubinteligent.org/licenta/vehicule](https://hubinteligent.org/licenta/vehicule)
 - Acces administrativ în Home Assistant
 - Nu este necesară conexiunea la internet — integrarea funcționează 100% local
 
@@ -52,6 +53,23 @@ Pentru o demonstrație completă a procesului de instalare și configurare, urm�
 4. Click **Salvare**
 
 Integrarea creează un dispozitiv cu un singur senzor (Informații). Restul senzorilor apar pe măsură ce completați date.
+
+---
+
+## Licență
+
+Integrarea necesită o **licență validă** pentru a funcționa. Fără licență:
+- Se creează doar senzorul `sensor.vehicule_{nr_normalizat}_licenta` cu valoarea „Licență necesară"
+- Toți senzorii normali sunt dezactivați
+
+Pentru a introduce licența:
+1. **Setări** → **Dispozitive și Servicii**
+2. Găsești **Vehicule** → click pe **Configurare**
+3. Selectează **Licență**
+4. Introdu cheia de licență
+5. Click **Salvează**
+
+Licențe disponibile la: [hubinteligent.org/licenta/vehicule](https://hubinteligent.org/licenta/vehicule)
 
 ---
 

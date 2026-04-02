@@ -31,6 +31,7 @@ Fără dependențe externe, fără API-uri, fără conexiune la internet. Totul 
 - **Serviciu actualizare**: `vehicule.actualizeaza_date` pentru automatizarea km-ului
 - **Backup / Restore**: servicii `vehicule.exporta_date` și `vehicule.importa_date` pentru export/import JSON (ideal pentru flote)
 - **Traduceri complete**: Română (ro.json) + Engleză (en.json + strings.json)
+- **Sistem de licență** — fără licență validă se afișează doar senzorul „Licență necesară"
 
 ---
 
@@ -63,7 +64,11 @@ Fără dependențe externe, fără API-uri, fără conexiune la internet. Totul 
 
 Integrarea creează un device cu un singur senzor (Informații). Restul senzorilor apar pe măsură ce completezi date.
 
-### Pasul 2 — Completează datele vehiculului
+### Pasul 2 — Licență
+
+Integrarea necesită o licență validă. Poți achiziționa una de la [hubinteligent.org/licenta/vehicule](https://hubinteligent.org/licenta/vehicule). Licența se introduce din **OptionsFlow** (Settings → Devices & Services → Vehicule → Configure).
+
+### Pasul 3 — Completează datele vehiculului
 
 1. **Settings** → **Devices & Services** → click pe intrarea vehiculului
 2. Click pe **Configure** (⚙️)
@@ -104,6 +109,7 @@ Unde `{nr_normalizat}` este numărul de înmatriculare normalizat (litere mici).
 
 | Senzor | Cheie | Unitate | Vizibil când... | Valoare |
 |--------|-------|---------|-----------------|---------|
+| Licență | `licenta` | — | Mereu (fără licență validă) | „Licență necesară" |
 | Informații | `informatii` | — | Mereu | Marcă + Model (sau nr. înmatriculare) |
 | Kilometraj | `kilometraj` | km | `km_curent` completat | Km curent |
 | RCA | `rca` | zile | `rca_data_expirare` completat | Zile rămase până la expirare |
@@ -349,11 +355,12 @@ Informațiile sensibile (VIN, serie CIV, nr. înmatriculare, nr. poliță, propr
 
 ```
 custom_components/vehicule/
-├── __init__.py          # Setup/unload integrare, servicii
+├── __init__.py          # Setup/unload integrare, servicii, licență
 ├── config_flow.py       # ConfigFlow + OptionsFlow cu meniuri categorisate
 ├── const.py             # Constante, liste opțiuni, normalizeaza_numar()
 ├── diagnostics.py       # Export diagnostics cu mascare date sensibile
 ├── helpers.py           # Funcții comune (conversii date, validări, calcule)
+├── license.py           # Manager licență (server-side v3.3, Ed25519, HMAC-SHA256)
 ├── manifest.json        # Metadata integrare
 ├── sensor.py            # Senzori condiționați per vehicul
 ├── services.yaml        # Definiții servicii
@@ -370,6 +377,7 @@ custom_components/vehicule/
 
 - **Home Assistant** 2025.11.0 sau mai nou
 - **HACS** (opțional, pentru instalare ușoară)
+- **Licență** validă — [hubinteligent.org/licenta/vehicule](https://hubinteligent.org/licenta/vehicule)
 - Fără dependențe externe, fără conexiune la internet
 
 ---
