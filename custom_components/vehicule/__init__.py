@@ -87,8 +87,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if LICENSE_DATA_KEY not in hass.data.get(DOMAIN, {}):
         _LOGGER.debug("[Vehicule] Inițializez LicenseManager (prima entry)")
         license_mgr = LicenseManager(hass)
-        await license_mgr.async_load()
+        # IMPORTANT: setăm referința ÎNAINTE de async_load() pentru a preveni
+        # race condition-ul: async_load() face await HTTP, ceea ce cedează
+        # event loop-ul. Fără această ordine, alte entry-uri concurente ar vedea
+        # LICENSE_DATA_KEY ca lipsă și ar crea câte un LicenseManager duplicat,
+        # generând N request-uri /check simultane (câte unul per vehicul).
         hass.data[DOMAIN][LICENSE_DATA_KEY] = license_mgr
+        await license_mgr.async_load()
         _LOGGER.debug(
             "[Vehicule] LicenseManager: status=%s, valid=%s, fingerprint=%s...",
             license_mgr.status,
