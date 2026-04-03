@@ -147,7 +147,7 @@ Verificarea periodică a licenței cu serverul:
 
 **Ce trebuie verificat:**
 1. Verifică cheia de licență în OptionsFlow
-2. Dacă a expirat, reînnoiește de la [hubinteligent.org/licenta/vehicule](https://hubinteligent.org/licenta/vehicule)
+2. Dacă a expirat, reînnoiește de la [hubinteligent.org/donate?ref=vehicule](https://hubinteligent.org/donate?ref=vehicule)
 3. Dacă serverul nu e accesibil, există un grace period — licența rămâne validă temporar
 
 ### Erori generale
