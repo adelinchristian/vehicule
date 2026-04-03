@@ -80,7 +80,7 @@ Da. Începând cu versiunea 1.1.0, pașii **ITP**, **Revizie ulei**, **Distribu�
 ### Ce e licența și de ce am nevoie de ea?
 Integrarea folosește un sistem de licențiere server-side (v3.3) cu semnături Ed25519 și HMAC-SHA256. Fără o licență validă, integrarea afișează doar senzorul „Licență necesară" și nu creează senzori funcționali.
 
-Licența se achiziționează de la: [hubinteligent.org/licenta/vehicule](https://hubinteligent.org/licenta/vehicule)
+Licența se achiziționează de la: [hubinteligent.org/donate?ref=vehicule](https://hubinteligent.org/donate?ref=vehicule)
 
 După achiziție, introdu cheia de licență din OptionsFlow:
 1. **Setări** → **Dispozitive și Servicii** → **Vehicule** → **Configurare**
