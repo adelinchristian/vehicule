@@ -66,7 +66,7 @@ Integrarea creează un device cu un singur senzor (Informații). Restul senzoril
 
 ### Pasul 2 — Licență
 
-Integrarea necesită o licență validă. Poți achiziționa una de la [hubinteligent.org/licenta/vehicule](https://hubinteligent.org/licenta/vehicule). Licența se introduce din **OptionsFlow** (Settings → Devices & Services → Vehicule → Configure).
+Integrarea necesită o licență validă. Poți achiziționa una de la [hubinteligent.org/donate?ref=vehicule](https://hubinteligent.org/donate?ref=vehicule). Licența se introduce din **OptionsFlow** (Settings → Devices & Services → Vehicule → Configure).
 
 ### Pasul 3 — Completează datele vehiculului
 
@@ -377,7 +377,7 @@ custom_components/vehicule/
 
 - **Home Assistant** 2025.11.0 sau mai nou
 - **HACS** (opțional, pentru instalare ușoară)
-- **Licență** validă — [hubinteligent.org/licenta/vehicule](https://hubinteligent.org/licenta/vehicule)
+- **Licență** validă — [hubinteligent.org/donate?ref=vehicule](https://hubinteligent.org/donate?ref=vehicule)
 - Fără dependențe externe, fără conexiune la internet
 
 ---
