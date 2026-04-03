@@ -18,7 +18,7 @@ Pentru o demonstrație completă a procesului de instalare și configurare, urm�
 
 - Home Assistant **2025.11.0** sau mai nou
 - **HACS** (opțional, pentru instalare simplificată)
-- **Licență** validă — de la [hubinteligent.org/licenta/vehicule](https://hubinteligent.org/licenta/vehicule)
+- **Licență** validă — de la [hubinteligent.org/donate?ref=vehicule](https://hubinteligent.org/donate?ref=vehicule)
 - Acces administrativ în Home Assistant
 - Nu este necesară conexiunea la internet — integrarea funcționează 100% local
 
@@ -69,7 +69,7 @@ Pentru a introduce licența:
 4. Introdu cheia de licență
 5. Click **Salvează**
 
-Licențe disponibile la: [hubinteligent.org/licenta/vehicule](https://hubinteligent.org/licenta/vehicule)
+Licențe disponibile la: [hubinteligent.org/donate?ref=vehicule](https://hubinteligent.org/donate?ref=vehicule)
 
 ---
 
