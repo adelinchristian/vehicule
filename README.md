@@ -29,7 +29,7 @@ Fără dependențe externe, fără API-uri, fără conexiune la internet. Totul 
 - **Verificare km obligatoriu**: ITP, revizie ulei, distribuție și frâne necesită setarea prealabilă a kilometrajului curent
 - **Leasing dinamic**: la prima selectare a tipului „Leasing", apare automat un pas suplimentar pentru data de expirare
 - **Serviciu actualizare km**: `vehicule.actualizeaza_date` pentru automatizarea kilometrajului
-- **Servicii actualizare documente**: `vehicule.actualizeaza_rovinieta`, `vehicule.actualizeaza_itp`, `vehicule.actualizeaza_rca`, `vehicule.actualizeaza_casco` — pentru integrarea cu surse externe de date (ex: eRovinieta CNAIR)
+- **Servicii actualizare documente**: `vehicule.actualizeaza_rovinieta`, `vehicule.actualizeaza_itp`, `vehicule.actualizeaza_rca`, `vehicule.actualizeaza_casco` — pentru integrarea cu surse externe de date (ex: [CNAIR eRovinieta](https://github.com/cnecrea/erovinieta))
 - **Backup / Restore**: servicii `vehicule.exporta_date` și `vehicule.importa_date` pentru export/import JSON (ideal pentru flote)
 - **Traduceri complete**: Română (ro.json) + Engleză (en.json + strings.json)
 - **Sistem de licență** — fără licență validă se afișează doar senzorul „Licență necesară"
