@@ -152,6 +152,10 @@ STARE_VALID: Final = "valid"
 SERVICE_ACTUALIZEAZA_DATE: Final = "actualizeaza_date"
 SERVICE_EXPORTA_DATE: Final = "exporta_date"
 SERVICE_IMPORTA_DATE: Final = "importa_date"
+SERVICE_ACTUALIZEAZA_ROVINIETA: Final = "actualizeaza_rovinieta"
+SERVICE_ACTUALIZEAZA_ITP: Final = "actualizeaza_itp"
+SERVICE_ACTUALIZEAZA_RCA: Final = "actualizeaza_rca"
+SERVICE_ACTUALIZEAZA_CASCO: Final = "actualizeaza_casco"
 
 # ─────────────────────────────────────────────
 # Șoferi
@@ -364,7 +368,7 @@ STRUCTURA_CATEGORII: Final = [
 # ─────────────────────────────────────────────
 CONF_LICENSE_KEY: Final = "license_key"
 LICENSE_DATA_KEY: Final = "vehicule_license_manager"
-LICENSE_PURCHASE_URL: Final = "https://hubinteligent.org/donate?ref=vehicule"
+LICENSE_PURCHASE_URL: Final = "https://hubinteligent.org/licenta/vehicule"
 
 
 def normalizeaza_numar(numar: str) -> str:

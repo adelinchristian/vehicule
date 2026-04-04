@@ -366,6 +366,130 @@
           "description": "Calea completă către fișierul JSON de backup (ex: /config/vehicule_backup_b123abc.json)."
         }
       }
+    },
+    "actualizeaza_rovinieta": {
+      "name": "Actualizează rovinieta",
+      "description": "Actualizează datele rovinietei pentru un vehicul. Datele pot fi în format ISO (AAAA-LL-ZZ) sau românesc (ZZ.LL.AAAA).",
+      "fields": {
+        "nr_inmatriculare": {
+          "name": "Număr de înmatriculare",
+          "description": "Numărul de înmatriculare al vehiculului (ex: B123ABC)."
+        },
+        "data_inceput": {
+          "name": "Data început",
+          "description": "Data de început a valabilității rovinietei."
+        },
+        "data_sfarsit": {
+          "name": "Data sfârșit",
+          "description": "Data de sfârșit a valabilității rovinietei."
+        },
+        "categorie": {
+          "name": "Categorie",
+          "description": "Categoria rovinietei (ex: A, B, C)."
+        },
+        "pret": {
+          "name": "Preț (RON)",
+          "description": "Prețul rovinietei în RON."
+        },
+        "arhivare": {
+          "name": "Arhivare date vechi",
+          "description": "Arhivează datele existente înainte de suprascrierea cu valorile noi."
+        }
+      }
+    },
+    "actualizeaza_itp": {
+      "name": "Actualizează ITP",
+      "description": "Actualizează datele inspecției tehnice periodice (ITP) pentru un vehicul.",
+      "fields": {
+        "nr_inmatriculare": {
+          "name": "Număr de înmatriculare",
+          "description": "Numărul de înmatriculare al vehiculului (ex: B123ABC)."
+        },
+        "data_expirare": {
+          "name": "Data expirare",
+          "description": "Data de expirare a ITP-ului."
+        },
+        "statie": {
+          "name": "Stație ITP",
+          "description": "Numele stației ITP."
+        },
+        "kilometraj": {
+          "name": "Kilometraj la ITP",
+          "description": "Kilometrajul vehiculului la momentul inspecției."
+        },
+        "arhivare": {
+          "name": "Arhivare date vechi",
+          "description": "Arhivează datele existente înainte de suprascrierea cu valorile noi."
+        }
+      }
+    },
+    "actualizeaza_rca": {
+      "name": "Actualizează RCA",
+      "description": "Actualizează datele asigurării RCA (răspundere civilă auto) pentru un vehicul.",
+      "fields": {
+        "nr_inmatriculare": {
+          "name": "Număr de înmatriculare",
+          "description": "Numărul de înmatriculare al vehiculului (ex: B123ABC)."
+        },
+        "numar_polita": {
+          "name": "Număr poliță",
+          "description": "Numărul poliței RCA."
+        },
+        "companie": {
+          "name": "Companie asigurare",
+          "description": "Numele companiei de asigurare."
+        },
+        "data_emitere": {
+          "name": "Data emitere",
+          "description": "Data emiterii poliței."
+        },
+        "data_expirare": {
+          "name": "Data expirare",
+          "description": "Data de expirare a poliței."
+        },
+        "cost": {
+          "name": "Cost (RON)",
+          "description": "Costul asigurării RCA în RON."
+        },
+        "arhivare": {
+          "name": "Arhivare date vechi",
+          "description": "Arhivează datele existente înainte de suprascrierea cu valorile noi."
+        }
+      }
+    },
+    "actualizeaza_casco": {
+      "name": "Actualizează CASCO",
+      "description": "Actualizează datele asigurării CASCO pentru un vehicul.",
+      "fields": {
+        "nr_inmatriculare": {
+          "name": "Număr de înmatriculare",
+          "description": "Numărul de înmatriculare al vehiculului (ex: B123ABC)."
+        },
+        "numar_polita": {
+          "name": "Număr poliță",
+          "description": "Numărul poliței CASCO."
+        },
+        "companie": {
+          "name": "Companie asigurare",
+          "description": "Numele companiei de asigurare."
+        },
+        "data_emitere": {
+          "name": "Data emitere",
+          "description": "Data emiterii poliței."
+        },
+        "data_expirare": {
+          "name": "Data expirare",
+          "description": "Data de expirare a poliței."
+        },
+        "cost": {
+          "name": "Cost (RON)",
+          "description": "Costul asigurării CASCO în RON."
+        },
+        "arhivare": {
+          "name": "Arhivare date vechi",
+          "description": "Arhivează datele existente înainte de suprascrierea cu valorile noi."
+        }
+      }
     }
   },
   "issues": {

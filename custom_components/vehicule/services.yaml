@@ -32,3 +32,160 @@ importa_date:
       example: "/config/vehicule_backup_b123abc.json"
       selector:
         text:
+
+actualizeaza_rovinieta:
+  fields:
+    nr_inmatriculare:
+      required: true
+      example: "B123ABC"
+      selector:
+        text:
+    data_inceput:
+      required: false
+      example: "2026-03-12"
+      selector:
+        text:
+    data_sfarsit:
+      required: false
+      example: "2027-03-11"
+      selector:
+        text:
+    categorie:
+      required: false
+      example: "A"
+      selector:
+        text:
+    pret:
+      required: false
+      example: 28
+      selector:
+        number:
+          min: 0
+          max: 99999
+          step: 1
+          unit_of_measurement: "RON"
+          mode: box
+    arhivare:
+      required: false
+      default: false
+      selector:
+        boolean:
+
+actualizeaza_itp:
+  fields:
+    nr_inmatriculare:
+      required: true
+      example: "B123ABC"
+      selector:
+        text:
+    data_expirare:
+      required: false
+      example: "2027-04-15"
+      selector:
+        text:
+    statie:
+      required: false
+      example: "ITP Auto Service SRL"
+      selector:
+        text:
+    kilometraj:
+      required: false
+      example: 85000
+      selector:
+        number:
+          min: 0
+          max: 9999999
+          step: 1
+          unit_of_measurement: "km"
+          mode: box
+    arhivare:
+      required: false
+      default: false
+      selector:
+        boolean:
+
+actualizeaza_rca:
+  fields:
+    nr_inmatriculare:
+      required: true
+      example: "B123ABC"
+      selector:
+        text:
+    numar_polita:
+      required: false
+      example: "RCA-2026-123456"
+      selector:
+        text:
+    companie:
+      required: false
+      example: "Euroins"
+      selector:
+        text:
+    data_emitere:
+      required: false
+      example: "2026-04-01"
+      selector:
+        text:
+    data_expirare:
+      required: false
+      example: "2027-04-01"
+      selector:
+        text:
+    cost:
+      required: false
+      example: 1500
+      selector:
+        number:
+          min: 0
+          max: 99999
+          step: 1
+          unit_of_measurement: "RON"
+          mode: box
+    arhivare:
+      required: false
+      default: false
+      selector:
+        boolean:
+
+actualizeaza_casco:
+  fields:
+    nr_inmatriculare:
+      required: true
+      example: "B123ABC"
+      selector:
+        text:
+    numar_polita:
+      required: false
+      example: "CASCO-2026-789012"
+      selector:
+        text:
+    companie:
+      required: false
+      example: "Allianz-Țiriac"
+      selector:
+        text:
+    data_emitere:
+      required: false
+      example: "2026-04-01"
+      selector:
+        text:
+    data_expirare:
+      required: false
+      example: "2027-04-01"
+      selector:
+        text:
+    cost:
+      required: false
+      example: 3500
+      selector:
+        number:
+          min: 0
+          max: 99999
+          step: 1
+          unit_of_measurement: "RON"
+          mode: box
+    arhivare:
+      required: false
+      default: false
+      selector:
+        boolean:

@@ -366,6 +366,130 @@
           "description": "Full path to the JSON backup file (e.g.: /config/vehicule_backup_b123abc.json)."
         }
       }
+    },
+    "actualizeaza_rovinieta": {
+      "name": "Update vignette (Rovinieta)",
+      "description": "Updates the vignette (Rovinieta) data for a vehicle. Dates can be in ISO (YYYY-MM-DD) or Romanian (DD.MM.YYYY) format.",
+      "fields": {
+        "nr_inmatriculare": {
+          "name": "License plate number",
+          "description": "The vehicle's license plate number (e.g.: B123ABC)."
+        },
+        "data_inceput": {
+          "name": "Start date",
+          "description": "Vignette validity start date."
+        },
+        "data_sfarsit": {
+          "name": "End date",
+          "description": "Vignette validity end date."
+        },
+        "categorie": {
+          "name": "Category",
+          "description": "Vignette category (e.g.: A, B, C)."
+        },
+        "pret": {
+          "name": "Price (RON)",
+          "description": "Vignette price in RON."
+        },
+        "arhivare": {
+          "name": "Archive old data",
+          "description": "Archive existing data before overwriting with new values."
+        }
+      }
+    },
+    "actualizeaza_itp": {
+      "name": "Update technical inspection (ITP)",
+      "description": "Updates the periodic technical inspection (ITP) data for a vehicle.",
+      "fields": {
+        "nr_inmatriculare": {
+          "name": "License plate number",
+          "description": "The vehicle's license plate number (e.g.: B123ABC)."
+        },
+        "data_expirare": {
+          "name": "Expiry date",
+          "description": "ITP expiry date."
+        },
+        "statie": {
+          "name": "Inspection station",
+          "description": "Name of the ITP inspection station."
+        },
+        "kilometraj": {
+          "name": "Mileage at ITP",
+          "description": "Vehicle mileage at the time of inspection."
+        },
+        "arhivare": {
+          "name": "Archive old data",
+          "description": "Archive existing data before overwriting with new values."
+        }
+      }
+    },
+    "actualizeaza_rca": {
+      "name": "Update RCA insurance",
+      "description": "Updates the RCA (third-party liability) insurance data for a vehicle.",
+      "fields": {
+        "nr_inmatriculare": {
+          "name": "License plate number",
+          "description": "The vehicle's license plate number (e.g.: B123ABC)."
+        },
+        "numar_polita": {
+          "name": "Policy number",
+          "description": "RCA policy number."
+        },
+        "companie": {
+          "name": "Insurance company",
+          "description": "Name of the insurance company."
+        },
+        "data_emitere": {
+          "name": "Issue date",
+          "description": "Policy issue date."
+        },
+        "data_expirare": {
+          "name": "Expiry date",
+          "description": "Policy expiry date."
+        },
+        "cost": {
+          "name": "Cost (RON)",
+          "description": "RCA cost in RON."
+        },
+        "arhivare": {
+          "name": "Archive old data",
+          "description": "Archive existing data before overwriting with new values."
+        }
+      }
+    },
+    "actualizeaza_casco": {
+      "name": "Update CASCO insurance",
+      "description": "Updates the CASCO (comprehensive) insurance data for a vehicle.",
+      "fields": {
+        "nr_inmatriculare": {
+          "name": "License plate number",
+          "description": "The vehicle's license plate number (e.g.: B123ABC)."
+        },
+        "numar_polita": {
+          "name": "Policy number",
+          "description": "CASCO policy number."
+        },
+        "companie": {
+          "name": "Insurance company",
+          "description": "Name of the insurance company."
+        },
+        "data_emitere": {
+          "name": "Issue date",
+          "description": "Policy issue date."
+        },
+        "data_expirare": {
+          "name": "Expiry date",
+          "description": "Policy expiry date."
+        },
+        "cost": {
+          "name": "Cost (RON)",
+          "description": "CASCO cost in RON."
+        },
+        "arhivare": {
+          "name": "Archive old data",
+          "description": "Archive existing data before overwriting with new values."
+        }
+      }
     }
   },
   "issues": {

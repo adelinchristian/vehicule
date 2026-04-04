@@ -27,17 +27,40 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     BACKUP_VERSION,
+    CATEGORII_ARHIVABILE,
+    CONF_CASCO_COMPANIE,
+    CONF_CASCO_COST,
+    CONF_CASCO_DATA_EMITERE,
+    CONF_CASCO_DATA_EXPIRARE,
+    CONF_CASCO_NUMAR_POLITA,
+    CONF_ISTORIC,
+    CONF_ITP_DATA_EXPIRARE,
+    CONF_ITP_KILOMETRAJ,
+    CONF_ITP_STATIE,
     CONF_KM_CURENT,
     CONF_NR_INMATRICULARE,
+    CONF_RCA_COMPANIE,
+    CONF_RCA_COST,
+    CONF_RCA_DATA_EMITERE,
+    CONF_RCA_DATA_EXPIRARE,
+    CONF_RCA_NUMAR_POLITA,
+    CONF_ROVINIETA_CATEGORIE,
+    CONF_ROVINIETA_DATA_INCEPUT,
+    CONF_ROVINIETA_DATA_SFARSIT,
+    CONF_ROVINIETA_PRET,
     DOMAIN,
     LICENSE_DATA_KEY,
     PLATFORMS,
+    SERVICE_ACTUALIZEAZA_CASCO,
     SERVICE_ACTUALIZEAZA_DATE,
+    SERVICE_ACTUALIZEAZA_ITP,
+    SERVICE_ACTUALIZEAZA_RCA,
+    SERVICE_ACTUALIZEAZA_ROVINIETA,
     SERVICE_EXPORTA_DATE,
     SERVICE_IMPORTA_DATE,
     normalizeaza_numar,
 )
-from .helpers import aplatizeaza_optiuni, structureaza_optiuni
+from .helpers import aplatizeaza_optiuni, ro_la_iso, structureaza_optiuni
 from .license import LicenseManager
 
 _LOGGER = logging.getLogger(__name__)
@@ -64,6 +87,67 @@ SCHEMA_EXPORTA_DATE = vol.Schema(
 SCHEMA_IMPORTA_DATE = vol.Schema(
     {
         vol.Required("cale_fisier"): cv.string,
+    }
+)
+
+# ─── Serviciu: actualizează rovinieta ───
+
+SCHEMA_ACTUALIZEAZA_ROVINIETA = vol.Schema(
+    {
+        vol.Required(CONF_NR_INMATRICULARE): cv.string,
+        vol.Optional("data_inceput"): cv.string,
+        vol.Optional("data_sfarsit"): cv.string,
+        vol.Optional("categorie"): cv.string,
+        vol.Optional("pret"): vol.All(
+            vol.Coerce(float), vol.Range(min=0, max=99999)
+        ),
+        vol.Optional("arhivare", default=False): cv.boolean,
+    }
+)
+
+# ─── Serviciu: actualizează ITP ───
+
+SCHEMA_ACTUALIZEAZA_ITP = vol.Schema(
+    {
+        vol.Required(CONF_NR_INMATRICULARE): cv.string,
+        vol.Optional("data_expirare"): cv.string,
+        vol.Optional("statie"): cv.string,
+        vol.Optional("kilometraj"): vol.All(
+            vol.Coerce(int), vol.Range(min=0, max=9_999_999)
+        ),
+        vol.Optional("arhivare", default=False): cv.boolean,
+    }
+)
+
+# ─── Serviciu: actualizează RCA ───
+
+SCHEMA_ACTUALIZEAZA_RCA = vol.Schema(
+    {
+        vol.Required(CONF_NR_INMATRICULARE): cv.string,
+        vol.Optional("numar_polita"): cv.string,
+        vol.Optional("companie"): cv.string,
+        vol.Optional("data_emitere"): cv.string,
+        vol.Optional("data_expirare"): cv.string,
+        vol.Optional("cost"): vol.All(
+            vol.Coerce(float), vol.Range(min=0, max=99999)
+        ),
+        vol.Optional("arhivare", default=False): cv.boolean,
+    }
+)
+
+# ─── Serviciu: actualizează CASCO ───
+
+SCHEMA_ACTUALIZEAZA_CASCO = vol.Schema(
+    {
+        vol.Required(CONF_NR_INMATRICULARE): cv.string,
+        vol.Optional("numar_polita"): cv.string,
+        vol.Optional("companie"): cv.string,
+        vol.Optional("data_emitere"): cv.string,
+        vol.Optional("data_expirare"): cv.string,
+        vol.Optional("cost"): vol.All(
+            vol.Coerce(float), vol.Range(min=0, max=99999)
+        ),
+        vol.Optional("arhivare", default=False): cv.boolean,
     }
 )
 
@@ -499,6 +583,92 @@ def _gaseste_vehicul(
 
 
 # ─────────────────────────────────────────────
+# Utilitar intern: normalizare dată pentru servicii
+# ─────────────────────────────────────────────
+
+
+def _normalizeaza_data(valoare: str) -> str | None:
+    """Normalizează o dată primită prin serviciu la format ISO (AAAA-LL-ZZ).
+
+    Acceptă:
+    - ISO: 2026-03-12 sau 2026-03-12 09:52:47
+    - RO:  12.03.2026
+    Returnează data în format ISO sau None dacă e invalidă.
+    """
+    if not valoare or not str(valoare).strip():
+        return None
+    text = str(valoare).strip()
+    # Dacă conține spațiu (ex: "2026-03-12 09:52:47"), păstrăm doar data
+    if " " in text:
+        text = text.split(" ")[0]
+    return ro_la_iso(text)
+
+
+# ─────────────────────────────────────────────
+# Utilitar intern: arhivare date vechi pentru servicii
+# ─────────────────────────────────────────────
+
+
+def _arhiveaza_date_vechi(
+    optiuni: dict[str, Any], categorie: str
+) -> None:
+    """Arhivează datele existente ale unei categorii în istoricul vehiculului.
+
+    Folosește aceeași structură ca _salveaza_si_inchide din config_flow.
+    """
+    if categorie not in CATEGORII_ARHIVABILE:
+        return
+    campuri_categorie = CATEGORII_ARHIVABILE[categorie]
+    date_vechi: dict[str, Any] = {}
+    for eticheta, cheie_const in campuri_categorie.items():
+        val = optiuni.get(cheie_const)
+        if val is not None and val != "":
+            date_vechi[eticheta] = val
+    if date_vechi:
+        istoric = list(optiuni.get(CONF_ISTORIC, []))
+        istoric.append(
+            {
+                "tip": categorie,
+                "data_arhivare": datetime.now().date().isoformat(),
+                "date": date_vechi,
+            }
+        )
+        optiuni[CONF_ISTORIC] = istoric
+
+
+# ─────────────────────────────────────────────
+# Utilitar intern: aplică câmpuri din serviciu în opțiuni
+# ─────────────────────────────────────────────
+
+
+def _aplica_campuri(
+    optiuni: dict[str, Any],
+    call_data: dict[str, Any],
+    mapare: dict[str, str],
+) -> None:
+    """Aplică câmpurile primite prin serviciu în opțiunile vehiculului.
+
+    Câmpurile de tip dată sunt normalizate automat la ISO.
+    Câmpurile cu valoare goală sunt ignorate (nu se șterg datele existente).
+    """
+    campuri_data_serviciu = {"data_inceput", "data_sfarsit", "data_emitere", "data_expirare"}
+    for cheie_serviciu, cheie_conf in mapare.items():
+        valoare = call_data.get(cheie_serviciu)
+        if valoare is None or (isinstance(valoare, str) and not valoare.strip()):
+            continue
+        if cheie_serviciu in campuri_data_serviciu:
+            valoare_iso = _normalizeaza_data(str(valoare))
+            if valoare_iso is None:
+                _LOGGER.warning(
+                    "Format dată invalid pentru %s: %s", cheie_serviciu, valoare
+                )
+                continue
+            optiuni[cheie_conf] = valoare_iso
+        else:
+            optiuni[cheie_conf] = valoare
+
+
+# ─────────────────────────────────────────────
 # Înregistrare servicii
 # ─────────────────────────────────────────────
 
@@ -676,6 +846,123 @@ async def _async_inregistreaza_servicii(hass: HomeAssistant) -> None:
             notification_id=f"vehicule_import_{nr_norm}",
         )
 
+    # ── Actualizare rovinieta ──
+
+    async def _handle_actualizeaza_rovinieta(call: ServiceCall) -> None:
+        """Procesează apelul de actualizare rovinieta."""
+        nr_inmatriculare = call.data[CONF_NR_INMATRICULARE].strip().upper()
+        entry = _gaseste_vehicul(hass, nr_inmatriculare)
+        if entry is None:
+            _LOGGER.warning(
+                "Nu am găsit vehiculul cu nr. %s", nr_inmatriculare
+            )
+            return
+
+        optiuni_noi: dict[str, Any] = {**entry.options}
+
+        # Arhivare date vechi dacă este solicitat
+        if call.data.get("arhivare"):
+            _arhiveaza_date_vechi(optiuni_noi, "rovinieta")
+
+        # Mapare câmpuri serviciu → câmpuri config
+        mapare = {
+            "data_inceput": CONF_ROVINIETA_DATA_INCEPUT,
+            "data_sfarsit": CONF_ROVINIETA_DATA_SFARSIT,
+            "categorie": CONF_ROVINIETA_CATEGORIE,
+            "pret": CONF_ROVINIETA_PRET,
+        }
+        _aplica_campuri(optiuni_noi, call.data, mapare)
+
+        hass.config_entries.async_update_entry(entry, options=optiuni_noi)
+        _LOGGER.info(
+            "Rovinieta actualizată pentru %s", nr_inmatriculare
+        )
+
+    # ── Actualizare ITP ──
+
+    async def _handle_actualizeaza_itp(call: ServiceCall) -> None:
+        """Procesează apelul de actualizare ITP."""
+        nr_inmatriculare = call.data[CONF_NR_INMATRICULARE].strip().upper()
+        entry = _gaseste_vehicul(hass, nr_inmatriculare)
+        if entry is None:
+            _LOGGER.warning(
+                "Nu am găsit vehiculul cu nr. %s", nr_inmatriculare
+            )
+            return
+
+        optiuni_noi: dict[str, Any] = {**entry.options}
+
+        if call.data.get("arhivare"):
+            _arhiveaza_date_vechi(optiuni_noi, "itp")
+
+        mapare = {
+            "data_expirare": CONF_ITP_DATA_EXPIRARE,
+            "statie": CONF_ITP_STATIE,
+            "kilometraj": CONF_ITP_KILOMETRAJ,
+        }
+        _aplica_campuri(optiuni_noi, call.data, mapare)
+
+        hass.config_entries.async_update_entry(entry, options=optiuni_noi)
+        _LOGGER.info("ITP actualizat pentru %s", nr_inmatriculare)
+
+    # ── Actualizare RCA ──
+
+    async def _handle_actualizeaza_rca(call: ServiceCall) -> None:
+        """Procesează apelul de actualizare RCA."""
+        nr_inmatriculare = call.data[CONF_NR_INMATRICULARE].strip().upper()
+        entry = _gaseste_vehicul(hass, nr_inmatriculare)
+        if entry is None:
+            _LOGGER.warning(
+                "Nu am găsit vehiculul cu nr. %s", nr_inmatriculare
+            )
+            return
+
+        optiuni_noi: dict[str, Any] = {**entry.options}
+
+        if call.data.get("arhivare"):
+            _arhiveaza_date_vechi(optiuni_noi, "rca")
+
+        mapare = {
+            "numar_polita": CONF_RCA_NUMAR_POLITA,
+            "companie": CONF_RCA_COMPANIE,
+            "data_emitere": CONF_RCA_DATA_EMITERE,
+            "data_expirare": CONF_RCA_DATA_EXPIRARE,
+            "cost": CONF_RCA_COST,
+        }
+        _aplica_campuri(optiuni_noi, call.data, mapare)
+
+        hass.config_entries.async_update_entry(entry, options=optiuni_noi)
+        _LOGGER.info("RCA actualizat pentru %s", nr_inmatriculare)
+
+    # ── Actualizare CASCO ──
+
+    async def _handle_actualizeaza_casco(call: ServiceCall) -> None:
+        """Procesează apelul de actualizare CASCO."""
+        nr_inmatriculare = call.data[CONF_NR_INMATRICULARE].strip().upper()
+        entry = _gaseste_vehicul(hass, nr_inmatriculare)
+        if entry is None:
+            _LOGGER.warning(
+                "Nu am găsit vehiculul cu nr. %s", nr_inmatriculare
+            )
+            return
+
+        optiuni_noi: dict[str, Any] = {**entry.options}
+
+        if call.data.get("arhivare"):
+            _arhiveaza_date_vechi(optiuni_noi, "casco")
+
+        mapare = {
+            "numar_polita": CONF_CASCO_NUMAR_POLITA,
+            "companie": CONF_CASCO_COMPANIE,
+            "data_emitere": CONF_CASCO_DATA_EMITERE,
+            "data_expirare": CONF_CASCO_DATA_EXPIRARE,
+            "cost": CONF_CASCO_COST,
+        }
+        _aplica_campuri(optiuni_noi, call.data, mapare)
+
+        hass.config_entries.async_update_entry(entry, options=optiuni_noi)
+        _LOGGER.info("CASCO actualizat pentru %s", nr_inmatriculare)
+
     # ── Înregistrare efectivă ──
 
     hass.services.async_register(
@@ -695,6 +982,30 @@ async def _async_inregistreaza_servicii(hass: HomeAssistant) -> None:
         SERVICE_IMPORTA_DATE,
         _handle_importa_date,
         schema=SCHEMA_IMPORTA_DATE,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_ACTUALIZEAZA_ROVINIETA,
+        _handle_actualizeaza_rovinieta,
+        schema=SCHEMA_ACTUALIZEAZA_ROVINIETA,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_ACTUALIZEAZA_ITP,
+        _handle_actualizeaza_itp,
+        schema=SCHEMA_ACTUALIZEAZA_ITP,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_ACTUALIZEAZA_RCA,
+        _handle_actualizeaza_rca,
+        schema=SCHEMA_ACTUALIZEAZA_RCA,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_ACTUALIZEAZA_CASCO,
+        _handle_actualizeaza_casco,
+        schema=SCHEMA_ACTUALIZEAZA_CASCO,
     )
     _LOGGER.debug("Serviciile %s au fost înregistrate", DOMAIN)
 
