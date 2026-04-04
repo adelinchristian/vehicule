@@ -28,7 +28,8 @@ Fără dependențe externe, fără API-uri, fără conexiune la internet. Totul 
 - **Date în format românesc**: ZZ.LL.AAAA în interfață, ISO intern
 - **Verificare km obligatoriu**: ITP, revizie ulei, distribuție și frâne necesită setarea prealabilă a kilometrajului curent
 - **Leasing dinamic**: la prima selectare a tipului „Leasing", apare automat un pas suplimentar pentru data de expirare
-- **Serviciu actualizare**: `vehicule.actualizeaza_date` pentru automatizarea km-ului
+- **Serviciu actualizare km**: `vehicule.actualizeaza_date` pentru automatizarea kilometrajului
+- **Servicii actualizare documente**: `vehicule.actualizeaza_rovinieta`, `vehicule.actualizeaza_itp`, `vehicule.actualizeaza_rca`, `vehicule.actualizeaza_casco` — pentru integrarea cu surse externe de date (ex: eRovinieta CNAIR)
 - **Backup / Restore**: servicii `vehicule.exporta_date` și `vehicule.importa_date` pentru export/import JSON (ideal pentru flote)
 - **Traduceri complete**: Română (ro.json) + Engleză (en.json + strings.json)
 - **Sistem de licență** — fără licență validă se afișează doar senzorul „Licență necesară"
@@ -211,6 +212,110 @@ data:
 
 > **Notă**: La import, dacă vehiculul există deja, opțiunile sunt actualizate. Dacă nu există, este creat automat o nouă intrare.
 
+### vehicule.actualizeaza_rovinieta
+
+Actualizează datele rovinietei pentru un vehicul. Datele calendaristice pot fi în format ISO (`2026-03-12`) sau românesc (`12.03.2026`). Acceptă și format ISO cu timp (`2026-03-12 09:52:47`) — partea de timp este ignorată automat.
+
+| Parametru | Tip | Obligatoriu | Descriere |
+|-----------|-----|-------------|-----------|
+| `nr_inmatriculare` | string | Da | Numărul de înmatriculare (ex: `B123ABC`) |
+| `data_inceput` | string | Nu | Data de început a valabilității |
+| `data_sfarsit` | string | Nu | Data de sfârșit a valabilității |
+| `categorie` | string | Nu | Categoria rovinietei (ex: `A`, `B`, `C`) |
+| `pret` | float | Nu | Prețul în RON (0–99.999) |
+| `arhivare` | bool | Nu | Arhivează datele vechi înainte de suprascriere (implicit: `false`) |
+
+**Exemplu**:
+```yaml
+action: vehicule.actualizeaza_rovinieta
+data:
+  nr_inmatriculare: "B123ABC"
+  data_inceput: "2026-03-12"
+  data_sfarsit: "2027-03-11"
+  categorie: "A"
+  pret: 28
+  arhivare: true
+```
+
+### vehicule.actualizeaza_itp
+
+Actualizează datele inspecției tehnice periodice (ITP) pentru un vehicul.
+
+| Parametru | Tip | Obligatoriu | Descriere |
+|-----------|-----|-------------|-----------|
+| `nr_inmatriculare` | string | Da | Numărul de înmatriculare (ex: `B123ABC`) |
+| `data_expirare` | string | Nu | Data de expirare a ITP |
+| `statie` | string | Nu | Stația ITP unde s-a efectuat inspecția |
+| `kilometraj` | int | Nu | Kilometrajul la momentul inspecției (0–9.999.999) |
+| `arhivare` | bool | Nu | Arhivează datele vechi (implicit: `false`) |
+
+**Exemplu**:
+```yaml
+action: vehicule.actualizeaza_itp
+data:
+  nr_inmatriculare: "B123ABC"
+  data_expirare: "2027-04-15"
+  statie: "ITP Auto Service SRL"
+  kilometraj: 85000
+  arhivare: true
+```
+
+### vehicule.actualizeaza_rca
+
+Actualizează datele asigurării RCA pentru un vehicul.
+
+| Parametru | Tip | Obligatoriu | Descriere |
+|-----------|-----|-------------|-----------|
+| `nr_inmatriculare` | string | Da | Numărul de înmatriculare (ex: `B123ABC`) |
+| `numar_polita` | string | Nu | Numărul poliței RCA |
+| `companie` | string | Nu | Compania de asigurare |
+| `data_emitere` | string | Nu | Data emiterii poliței |
+| `data_expirare` | string | Nu | Data expirării poliței |
+| `cost` | float | Nu | Costul poliței în RON (0–99.999) |
+| `arhivare` | bool | Nu | Arhivează datele vechi (implicit: `false`) |
+
+**Exemplu**:
+```yaml
+action: vehicule.actualizeaza_rca
+data:
+  nr_inmatriculare: "B123ABC"
+  numar_polita: "RCA-2026-123456"
+  companie: "Euroins"
+  data_emitere: "2026-04-01"
+  data_expirare: "2027-04-01"
+  cost: 1500
+  arhivare: true
+```
+
+### vehicule.actualizeaza_casco
+
+Actualizează datele asigurării CASCO pentru un vehicul.
+
+| Parametru | Tip | Obligatoriu | Descriere |
+|-----------|-----|-------------|-----------|
+| `nr_inmatriculare` | string | Da | Numărul de înmatriculare (ex: `B123ABC`) |
+| `numar_polita` | string | Nu | Numărul poliței CASCO |
+| `companie` | string | Nu | Compania de asigurare |
+| `data_emitere` | string | Nu | Data emiterii poliței |
+| `data_expirare` | string | Nu | Data expirării poliței |
+| `cost` | float | Nu | Costul poliței în RON (0–99.999) |
+| `arhivare` | bool | Nu | Arhivează datele vechi (implicit: `false`) |
+
+**Exemplu**:
+```yaml
+action: vehicule.actualizeaza_casco
+data:
+  nr_inmatriculare: "B123ABC"
+  numar_polita: "CASCO-2026-789012"
+  companie: "Allianz-Țiriac"
+  data_emitere: "2026-04-01"
+  data_expirare: "2027-04-01"
+  cost: 3500
+  arhivare: true
+```
+
+> **Notă**: Toate serviciile de actualizare documente fac **merge** — actualizează doar câmpurile transmise, fără a șterge datele existente. Dacă trimiți doar `data_sfarsit`, celelalte câmpuri rămân neschimbate.
+
 ---
 
 ## Exemple de automatizări
@@ -308,6 +413,67 @@ automation:
         data:
           nr_inmatriculare: "B123ABC"
           km_curent: "{{ states('sensor.obd_odometer') | int(0) }}"
+```
+
+### Sincronizare rovinieta din integrarea eRovinieta (CNAIR)
+
+Dacă folosești integrarea [eRovinieta](https://github.com/cnecrea/erovinieta), poți sincroniza automat datele rovinietei. Automatizarea se declanșează la orice schimbare a senzorului CNAIR și actualizează rovinieta în integrarea Vehicule.
+
+```yaml
+automation:
+  - alias: "Sincronizare rovinieta eRovinieta → Vehicule"
+    description: "Preia automat datele rovinietei din CNAIR eRovinieta"
+    triggers:
+      - trigger: state
+        entity_id: sensor.cnair_erovinieta_rovinieta_activa_b123abc
+    conditions:
+      - condition: template
+        value_template: >
+          {{ state_attr('sensor.cnair_erovinieta_rovinieta_activa_b123abc',
+             'Data început vignietă') is not none }}
+    actions:
+      - action: vehicule.actualizeaza_rovinieta
+        data:
+          nr_inmatriculare: "B123ABC"
+          data_inceput: >
+            {{ state_attr('sensor.cnair_erovinieta_rovinieta_activa_b123abc',
+               'Data început vignietă') }}
+          data_sfarsit: >
+            {{ state_attr('sensor.cnair_erovinieta_rovinieta_activa_b123abc',
+               'Data sfârșit vignietă') }}
+          categorie: >
+            {{ state_attr('sensor.cnair_erovinieta_rovinieta_activa_b123abc',
+               'Categorie vignietă') }}
+          arhivare: true
+```
+
+> **Notă**: Formatul `2026-03-12 09:52:47` primit de la eRovinieta este acceptat automat — serviciul extrage doar data, fără intervenție manuală.
+
+### Actualizare RCA dintr-o sursă externă
+
+Exemplu generic de automatizare care actualizează datele RCA dintr-un senzor extern:
+
+```yaml
+automation:
+  - alias: "Actualizare RCA din sursă externă"
+    triggers:
+      - trigger: state
+        entity_id: sensor.rca_provider_b123abc
+    actions:
+      - action: vehicule.actualizeaza_rca
+        data:
+          nr_inmatriculare: "B123ABC"
+          numar_polita: >
+            {{ state_attr('sensor.rca_provider_b123abc', 'numar_polita') }}
+          companie: >
+            {{ state_attr('sensor.rca_provider_b123abc', 'companie') }}
+          data_emitere: >
+            {{ state_attr('sensor.rca_provider_b123abc', 'data_emitere') }}
+          data_expirare: >
+            {{ state_attr('sensor.rca_provider_b123abc', 'data_expirare') }}
+          cost: >
+            {{ state_attr('sensor.rca_provider_b123abc', 'cost') | float(0) }}
+          arhivare: true
 ```
 
 ---
