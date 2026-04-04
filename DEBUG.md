@@ -45,18 +45,14 @@ Când integrarea vehicule se încarcă pentru prima dată sau după o repornire,
 [custom_components.vehicule] Configurez vehiculul: B123ABC
 [custom_components.vehicule.sensor] Creez senzorii pentru vehiculul: B123ABC
 [custom_components.vehicule.sensor] Vehicul B123ABC: 5 senzori creați (din 17 posibili)
-[custom_components.vehicule] Serviciul vehicule.actualizeaza_date a fost înregistrat
-[custom_components.vehicule] Serviciul vehicule.exporta_date a fost înregistrat
-[custom_components.vehicule] Serviciul vehicule.importa_date a fost înregistrat
+[custom_components.vehicule] Serviciile vehicule au fost înregistrate
 ```
 
 **Explicație:**
 - `Configurez vehiculul: B123ABC` – Integrarea a inițializat vehiculul cu numărul de înmatriculare
 - `Creez senzorii...` – Se procesează entitățile care vor fi create
 - `5 senzori creați (din 17 posibili)` – Doar 5 senzori sunt relevanți pentru datele tale (de ex., dacă nu ai date despre rovinieta, senzorul de rovinieta nu va fi creat)
-- `Serviciul vehicule.actualizeaza_date a fost înregistrat` – Serviciul pentru actualizare manuală a datelor este disponibil
-- `Serviciul vehicule.exporta_date a fost înregistrat` – Serviciul pentru export backup JSON
-- `Serviciul vehicule.importa_date a fost înregistrat` – Serviciul pentru import backup JSON
+- `Serviciile vehicule au fost înregistrate` – Toate serviciile sunt disponibile (actualizeaza_date, exporta_date, importa_date, actualizeaza_rovinieta, actualizeaza_itp, actualizeaza_rca, actualizeaza_casco)
 
 ---
 
@@ -70,7 +66,16 @@ Când actualizezi datele printr-un apel de serviciu:
 [custom_components.vehicule.sensor] Vehicul B123ABC: 6 senzori creați (din 17 posibili)
 ```
 
-Senzori noi pot apărea când completezi date (de ex., dacă adaugi prima dată consumul, senzorul de consum va fi creat).
+Când actualizezi documente (rovinieta, ITP, RCA, CASCO):
+
+```
+[custom_components.vehicule] Rovinieta actualizată pentru B123ABC
+[custom_components.vehicule] ITP actualizat pentru B123ABC
+[custom_components.vehicule] RCA actualizat pentru B123ABC
+[custom_components.vehicule] CASCO actualizat pentru B123ABC
+```
+
+Senzori noi pot apărea când completezi date (de ex., dacă adaugi prima dată rovinieta, senzorul de rovinieta va fi creat).
 
 ### Ștergerea vehiculului
 Când elimini o intrare din integrare:
@@ -179,10 +184,10 @@ Atunci când Home Assistant pornește, secvența este:
 
 3. **Înregistrarea serviciilor**
    ```
-   [custom_components.vehicule] Serviciul vehicule.actualizeaza_date a fost înregistrat
-   [custom_components.vehicule] Serviciul vehicule.exporta_date a fost înregistrat
-   [custom_components.vehicule] Serviciul vehicule.importa_date a fost înregistrat
+   [custom_components.vehicule] Serviciile vehicule au fost înregistrate
    ```
+
+Serviciile înregistrate: `actualizeaza_date`, `exporta_date`, `importa_date`, `actualizeaza_rovinieta`, `actualizeaza_itp`, `actualizeaza_rca`, `actualizeaza_casco`.
 
 După aceasta, integrarea este gata de utilizare.
 
