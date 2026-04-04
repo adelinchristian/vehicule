@@ -1,7 +1,7 @@
 {
   "repo": "",
   "prima_colectare": "",
-  "ultima_actualizare": "2026-04-03T06:54:51Z",
+  "ultima_actualizare": "2026-04-04T06:44:27Z",
   "zilnic": {
     "2026-03-01": {
       "clones_total": 0,
@@ -1056,10 +1056,68 @@
           "vizite": 3,
           "vizitatori_unici": 1
         }
+      ],
+      "clones_total": 89,
+      "clones_unice": 44,
+      "views_total": 18,
+      "views_unice": 13
+    },
+    "2026-04-04": {
+      "stars": 12,
+      "forks": 0,
+      "watchers": 0,
+      "open_issues": 1,
+      "referrers": [
+        {
+          "sursa": "github.com",
+          "vizite": 162,
+          "vizitatori_unici": 111
+        },
+        {
+          "sursa": "lm.facebook.com",
+          "vizite": 40,
+          "vizitatori_unici": 40
+        },
+        {
+          "sursa": "m.facebook.com",
+          "vizite": 39,
+          "vizitatori_unici": 33
+        },
+        {
+          "sursa": "hubinteligent.org",
+          "vizite": 36,
+          "vizitatori_unici": 10
+        },
+        {
+          "sursa": "l.facebook.com",
+          "vizite": 34,
+          "vizitatori_unici": 28
+        },
+        {
+          "sursa": "facebook.com",
+          "vizite": 8,
+          "vizitatori_unici": 6
+        },
+        {
+          "sursa": "buymeacoffee.com",
+          "vizite": 5,
+          "vizitatori_unici": 2
+        },
+        {
+          "sursa": "Google",
+          "vizite": 3,
+          "vizitatori_unici": 2
+        },
+        {
+          "sursa": "statics.teams.cdn.office.net",
+          "vizite": 3,
+          "vizitatori_unici": 1
+        }
       ]
     }
   },
   "releases": {
+    "2.2.0": 1,
     "2.1.0": 0,
     "2.0.0": 0,
     "1.9.0": 1,
