@@ -335,6 +335,106 @@ data:
   cale_fisier: "/config/vehicule_backup_b123abc.json"
 ```
 
+### vehicule.actualizeaza_rovinieta
+
+Actualizează datele rovinietei pentru un vehicul identificat prin numărul de înmatriculare. Datele calendaristice pot fi în format ISO (`2026-03-12`), ISO cu timp (`2026-03-12 09:52:47`) sau românesc (`12.03.2026`).
+
+| Parametru | Tip | Obligatoriu | Descriere | Exemplu |
+|-----------|-----|-------------|-----------|---------|
+| `nr_inmatriculare` | string | Da | Placa vehiculului | `B123ABC` |
+| `data_inceput` | string | Nu | Data de început valabilitate | `2026-03-12` |
+| `data_sfarsit` | string | Nu | Data de sfârșit valabilitate | `2027-03-11` |
+| `categorie` | string | Nu | Categoria rovinietei | `A` |
+| `pret` | float | Nu | Prețul în RON (0–99.999) | `28` |
+| `arhivare` | bool | Nu | Arhivează datele vechi (implicit: `false`) | `true` |
+
+```yaml
+action: vehicule.actualizeaza_rovinieta
+data:
+  nr_inmatriculare: "B123ABC"
+  data_inceput: "2026-03-12"
+  data_sfarsit: "2027-03-11"
+  categorie: "A"
+  pret: 28
+  arhivare: true
+```
+
+### vehicule.actualizeaza_itp
+
+Actualizează datele ITP pentru un vehicul.
+
+| Parametru | Tip | Obligatoriu | Descriere | Exemplu |
+|-----------|-----|-------------|-----------|---------|
+| `nr_inmatriculare` | string | Da | Placa vehiculului | `B123ABC` |
+| `data_expirare` | string | Nu | Data de expirare ITP | `2027-04-15` |
+| `statie` | string | Nu | Stația ITP | `ITP Auto Service SRL` |
+| `kilometraj` | int | Nu | Km la momentul inspecției (0–9.999.999) | `85000` |
+| `arhivare` | bool | Nu | Arhivează datele vechi (implicit: `false`) | `true` |
+
+```yaml
+action: vehicule.actualizeaza_itp
+data:
+  nr_inmatriculare: "B123ABC"
+  data_expirare: "2027-04-15"
+  statie: "ITP Auto Service SRL"
+  kilometraj: 85000
+  arhivare: true
+```
+
+### vehicule.actualizeaza_rca
+
+Actualizează datele asigurării RCA pentru un vehicul.
+
+| Parametru | Tip | Obligatoriu | Descriere | Exemplu |
+|-----------|-----|-------------|-----------|---------|
+| `nr_inmatriculare` | string | Da | Placa vehiculului | `B123ABC` |
+| `numar_polita` | string | Nu | Numărul poliței | `RCA-2026-123456` |
+| `companie` | string | Nu | Compania de asigurare | `Euroins` |
+| `data_emitere` | string | Nu | Data emiterii | `2026-04-01` |
+| `data_expirare` | string | Nu | Data expirării | `2027-04-01` |
+| `cost` | float | Nu | Cost în RON (0–99.999) | `1500` |
+| `arhivare` | bool | Nu | Arhivează datele vechi (implicit: `false`) | `true` |
+
+```yaml
+action: vehicule.actualizeaza_rca
+data:
+  nr_inmatriculare: "B123ABC"
+  numar_polita: "RCA-2026-123456"
+  companie: "Euroins"
+  data_emitere: "2026-04-01"
+  data_expirare: "2027-04-01"
+  cost: 1500
+  arhivare: true
+```
+
+### vehicule.actualizeaza_casco
+
+Actualizează datele asigurării CASCO pentru un vehicul.
+
+| Parametru | Tip | Obligatoriu | Descriere | Exemplu |
+|-----------|-----|-------------|-----------|---------|
+| `nr_inmatriculare` | string | Da | Placa vehiculului | `B123ABC` |
+| `numar_polita` | string | Nu | Numărul poliței | `CASCO-2026-789012` |
+| `companie` | string | Nu | Compania de asigurare | `Allianz-Țiriac` |
+| `data_emitere` | string | Nu | Data emiterii | `2026-04-01` |
+| `data_expirare` | string | Nu | Data expirării | `2027-04-01` |
+| `cost` | float | Nu | Cost în RON (0–99.999) | `3500` |
+| `arhivare` | bool | Nu | Arhivează datele vechi (implicit: `false`) | `true` |
+
+```yaml
+action: vehicule.actualizeaza_casco
+data:
+  nr_inmatriculare: "B123ABC"
+  numar_polita: "CASCO-2026-789012"
+  companie: "Allianz-Țiriac"
+  data_emitere: "2026-04-01"
+  data_expirare: "2027-04-01"
+  cost: 3500
+  arhivare: true
+```
+
+> **Notă**: Serviciile de actualizare documente fac **merge** — actualizează doar câmpurile transmise, fără a șterge datele existente. Toate câmpurile în afară de `nr_inmatriculare` sunt opționale.
+
 ---
 
 ## Exemple de automatizări
@@ -397,6 +497,39 @@ automation:
 
 > **Notă**: Înlocuiți `notify.mobile_app` cu serviciul vostru de notificare. Lista de senzori și pragurile se pot ajusta.
 
+### Sincronizare rovinieta din eRovinieta (CNAIR)
+
+Dacă folosiți integrarea [eRovinieta](https://github.com/cnecrea/erovinieta), puteți sincroniza automat datele rovinietei:
+
+```yaml
+automation:
+  - alias: "Sincronizare rovinieta eRovinieta → Vehicule"
+    triggers:
+      - trigger: state
+        entity_id: sensor.cnair_erovinieta_rovinieta_activa_b123abc
+    conditions:
+      - condition: template
+        value_template: >
+          {{ state_attr('sensor.cnair_erovinieta_rovinieta_activa_b123abc',
+             'Data început vignietă') is not none }}
+    actions:
+      - action: vehicule.actualizeaza_rovinieta
+        data:
+          nr_inmatriculare: "B123ABC"
+          data_inceput: >
+            {{ state_attr('sensor.cnair_erovinieta_rovinieta_activa_b123abc',
+               'Data început vignietă') }}
+          data_sfarsit: >
+            {{ state_attr('sensor.cnair_erovinieta_rovinieta_activa_b123abc',
+               'Data sfârșit vignietă') }}
+          categorie: >
+            {{ state_attr('sensor.cnair_erovinieta_rovinieta_activa_b123abc',
+               'Categorie vignietă') }}
+          arhivare: true
+```
+
+> Formatul `2026-03-12 09:52:47` primit de la eRovinieta este acceptat automat — serviciul extrage doar data.
+
 ---
 
 ## Carduri Lovelace
@@ -442,7 +575,7 @@ Informațiile sensibile (VIN, serie CIV, nr. înmatriculare, nr. poliță, propr
 1. **Setări** → **Dispozitive și servicii** → **Dispozitive** — căutați dispozitivul cu placa vehiculului
 2. **Setări** → **Dispozitive și servicii** → **Entități** — filtrați după `sensor.vehicule_` și verificați senzorii creați
 3. **Setări** → **Sistem** → **Jurnale** — filtrați după `vehicule` și verificați că nu sunt erori
-4. Testați serviciul `vehicule.actualizeaza_date` din **Instrumente pentru dezvoltatori** → **Servicii**
+4. Testați serviciile din **Instrumente pentru dezvoltatori** → **Servicii** (ex: `vehicule.actualizeaza_date`, `vehicule.actualizeaza_rovinieta`, `vehicule.actualizeaza_itp`, `vehicule.actualizeaza_rca`, `vehicule.actualizeaza_casco`)
 
 ---
 
