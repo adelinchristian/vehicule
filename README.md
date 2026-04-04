@@ -417,7 +417,7 @@ automation:
 
 ### Sincronizare rovinieta din integrarea eRovinieta (CNAIR)
 
-Dacă folosești integrarea [eRovinieta](https://github.com/cnecrea/erovinieta), poți sincroniza automat datele rovinietei. Automatizarea se declanșează la orice schimbare a senzorului CNAIR și actualizează rovinieta în integrarea Vehicule.
+Dacă folosești integrarea [CNAIR eRovinieta](https://github.com/cnecrea/erovinieta), poți sincroniza automat datele rovinietei. Automatizarea se declanșează la orice schimbare a senzorului CNAIR și actualizează rovinieta în integrarea Vehicule.
 
 ```yaml
 automation:
