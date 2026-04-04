@@ -299,9 +299,54 @@ automation:
           km_curent: "{{ states('sensor.obd_odometer') | int(0) }}"
 ```
 
+### Pot actualiza automat rovinieta, ITP, RCA sau CASCO dintr-o sursă externă?
+
+Da. Începând cu versiunea 2.2.0, integrarea oferă 4 servicii dedicate:
+
+| Serviciu | Document |
+|----------|----------|
+| `vehicule.actualizeaza_rovinieta` | Rovinieta |
+| `vehicule.actualizeaza_itp` | ITP |
+| `vehicule.actualizeaza_rca` | Asigurare RCA |
+| `vehicule.actualizeaza_casco` | Asigurare CASCO |
+
+Fiecare serviciu necesită `nr_inmatriculare` (obligatoriu) și acceptă câmpurile specifice documentului (toate opționale). Datele calendaristice pot fi în format ISO (`2026-03-12`), ISO cu timp (`2026-03-12 09:52:47`) sau românesc (`12.03.2026`).
+
+Exemplu — sincronizare rovinieta din integrarea [eRovinieta](https://github.com/cnecrea/erovinieta) (CNAIR):
+
+```yaml
+automation:
+  - alias: "Sincronizare rovinieta eRovinieta → Vehicule"
+    triggers:
+      - trigger: state
+        entity_id: sensor.cnair_erovinieta_rovinieta_activa_b123abc
+    conditions:
+      - condition: template
+        value_template: >
+          {{ state_attr('sensor.cnair_erovinieta_rovinieta_activa_b123abc',
+             'Data început vignietă') is not none }}
+    actions:
+      - action: vehicule.actualizeaza_rovinieta
+        data:
+          nr_inmatriculare: "B123ABC"
+          data_inceput: >
+            {{ state_attr('sensor.cnair_erovinieta_rovinieta_activa_b123abc',
+               'Data început vignietă') }}
+          data_sfarsit: >
+            {{ state_attr('sensor.cnair_erovinieta_rovinieta_activa_b123abc',
+               'Data sfârșit vignietă') }}
+          categorie: >
+            {{ state_attr('sensor.cnair_erovinieta_rovinieta_activa_b123abc',
+               'Categorie vignietă') }}
+          arhivare: true
+```
+
+Serviciile fac **merge** — actualizează doar câmpurile transmise, fără a șterge datele existente. Opțiunea `arhivare: true` salvează datele vechi în istoric înainte de suprascriere.
+
 ### Care sunt cazurile de utilizare frecvente?
 - Notificări push pe telefon când expira RCA/Casco/ITP
 - Trimitere de email/SMS cu reminder-uri
+- Sincronizare automată din integrări externe (eRovinieta, viitoare integrări RCA/ITP)
 - Logging datelor în baze de date externe (ex: InfluxDB)
 - Integrare cu dashboard-uri custom în Lovelace
 - Afișare în tablete/displaye montate în vehicul
