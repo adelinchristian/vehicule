@@ -1,10 +1,10 @@
-name: Procesare problemă licență
+name: Procesare cerere de licență
 on:
   issues:
     types: [opened]
 jobs:
   dispatch:
-    if: contains(github.event.issue.labels.*.name, 'problemă licență')
+    if: contains(github.event.issue.labels.*.name, 'licență')
     runs-on: ubuntu-latest
     steps:
       - name: Trimite la procesare
@@ -12,7 +12,7 @@ jobs:
         with:
           token: ${{ secrets.HUBINTELIGENT_PAT }}
           repository: cnecrea/automation
-          event-type: problema-licenta
+          event-type: cerere-licenta
           client-payload: |
             {
               "repo_owner": "${{ github.repository_owner }}",
