@@ -1,7 +1,7 @@
 {
   "repo": "",
   "prima_colectare": "",
-  "ultima_actualizare": "2026-04-06T07:15:01Z",
+  "ultima_actualizare": "2026-04-07T07:02:01Z",
   "zilnic": {
     "2026-03-01": {
       "clones_total": 0,
@@ -1170,7 +1170,11 @@
           "vizite": 3,
           "vizitatori_unici": 1
         }
-      ]
+      ],
+      "clones_total": 18,
+      "clones_unice": 13,
+      "views_total": 10,
+      "views_unice": 10
     },
     "2026-04-06": {
       "stars": 13,
@@ -1221,6 +1225,63 @@
         {
           "sursa": "statics.teams.cdn.office.net",
           "vizite": 3,
+          "vizitatori_unici": 1
+        }
+      ],
+      "clones_total": 32,
+      "clones_unice": 18,
+      "views_total": 31,
+      "views_unice": 19
+    },
+    "2026-04-07": {
+      "stars": 13,
+      "forks": 0,
+      "watchers": 0,
+      "open_issues": 0,
+      "referrers": [
+        {
+          "sursa": "github.com",
+          "vizite": 185,
+          "vizitatori_unici": 123
+        },
+        {
+          "sursa": "hubinteligent.org",
+          "vizite": 48,
+          "vizitatori_unici": 16
+        },
+        {
+          "sursa": "lm.facebook.com",
+          "vizite": 43,
+          "vizitatori_unici": 42
+        },
+        {
+          "sursa": "m.facebook.com",
+          "vizite": 39,
+          "vizitatori_unici": 33
+        },
+        {
+          "sursa": "l.facebook.com",
+          "vizite": 34,
+          "vizitatori_unici": 28
+        },
+        {
+          "sursa": "facebook.com",
+          "vizite": 8,
+          "vizitatori_unici": 6
+        },
+        {
+          "sursa": "buymeacoffee.com",
+          "vizite": 5,
+          "vizitatori_unici": 2
+        },
+        {
+          "sursa": "statics.teams.cdn.office.net",
+          "vizite": 3,
+          "vizitatori_unici": 1
+        },
+        {
+          "sursa": "Google",
+          "vizite": 1,
           "vizitatori_unici": 1
         }
       ]
