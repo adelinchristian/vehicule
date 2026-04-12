@@ -383,11 +383,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
         _LOGGER.debug("[Vehicule] Entry %s eliminat din hass.data", entry.entry_id)
 
-        # Verifică dacă mai sunt entry-uri active (ignoră cheile interne)
-        chei_interne = {LICENSE_DATA_KEY, "_cancel_heartbeat", "_cancel_cache_expiry"}
+        # Verifică dacă mai sunt entry-uri active (folosim config_entries, nu hass.data)
         entry_ids_ramase = {
-            k for k in hass.data.get(DOMAIN, {})
-            if k not in chei_interne
+            e.entry_id
+            for e in hass.config_entries.async_entries(DOMAIN)
+            if e.entry_id != entry.entry_id
         }
 
         _LOGGER.debug(
