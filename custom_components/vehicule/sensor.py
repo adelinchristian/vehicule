@@ -113,6 +113,7 @@ from .const import (
     CONF_VIN,
     DOMAIN,
     LICENSE_DATA_KEY,
+    USE_LICENSE,
     normalizeaza_numar,
 )
 from .helpers import (
@@ -972,6 +973,8 @@ def _senzor_vizibil(desc: VehiculeSensorDescription, date_vehicul: dict[str, Any
 
 def _is_license_valid(hass: HomeAssistant) -> bool:
     """Verifică dacă licența este validă (real-time)."""
+    if not USE_LICENSE:
+        return True
     mgr = hass.data.get(DOMAIN, {}).get(LICENSE_DATA_KEY)
     if mgr is None:
         return False
@@ -1200,6 +1203,8 @@ class VehiculeSensor(SensorEntity):
     @property
     def _license_valid(self) -> bool:
         """Verificare real-time a licenței (nu boolean static)."""
+        if not USE_LICENSE:
+            return True
         mgr = self.hass.data.get(DOMAIN, {}).get(LICENSE_DATA_KEY)
         if mgr is None:
             return False
@@ -1341,6 +1346,8 @@ class SoferSensor(SensorEntity):
 
     @property
     def _license_valid(self) -> bool:
+        if not USE_LICENSE:
+            return True
         mgr = self.hass.data.get(DOMAIN, {}).get(LICENSE_DATA_KEY)
         if mgr is None:
             return False

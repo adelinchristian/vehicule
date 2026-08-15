@@ -5,7 +5,8 @@ from typing import Final
 # ─────────────────────────────────────────────
 # Domeniu și platforme
 # ─────────────────────────────────────────────
-DOMAIN: Final = "vehicule"
+USE_LICENSE: Final = False
+DOMAIN: Final = "vehicule_nolicense" if not USE_LICENSE else "vehicule"
 PLATFORMS: Final = ["sensor"]
 
 # ─────────────────────────────────────────────

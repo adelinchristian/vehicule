@@ -1,6 +1,6 @@
 {
-  "domain": "vehicule",
-  "name": "Vehicule",
+  "domain": "vehicule_nolicense",
+  "name": "Vehicule (no license)",
   "codeowners": [
     "@cnecrea"
   ],
