@@ -9,9 +9,6 @@
   "documentation": "https://github.com/cnecrea/vehicule",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/cnecrea/vehicule/issues",
-  "categories": [
-    "vehicles_transport",
-    "vehicles_transport.cars_evs"
-  ],
+  "categories": "vehicles_transport",
   "version": "2.3.3"
 }
