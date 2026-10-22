@@ -9,10 +9,5 @@
   "documentation": "https://github.com/cnecrea/vehicule",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/cnecrea/vehicule/issues",
-  "version": "2.3.3",
-  "categories": [
-    "plugs_switches",
-    "lighting.bulbs_lamps",
-    "energy.meters_monitoring"
-  ]
+  "version": "2.3.3"
 }
