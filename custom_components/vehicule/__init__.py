@@ -15,7 +15,7 @@ from typing import Any
 import voluptuous as vol
 from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
@@ -239,6 +239,8 @@ def _schedule_license_check(hass: HomeAssistant, mgr: LicenseManager) -> None:
     /check (+ /validate pentru licențe) → dacă validitatea s-a schimbat,
     actualizează notificările și reîncarcă senzorii.
     """
+    if hass.is_stopping:
+        return  # la oprire sesiunea HTTP se închide — nu mai verificăm
     domain_data = hass.data.get(DOMAIN)
     if domain_data is None or domain_data.get(LICENSE_DATA_KEY) is not mgr:
         return  # integrarea a fost descărcată între timp
@@ -248,16 +250,14 @@ def _schedule_license_check(hass: HomeAssistant, mgr: LicenseManager) -> None:
 
     delay = mgr.check_interval_seconds + (2 if not mgr.needs_heartbeat else 0)
 
-    async def _on_check(_now) -> None:
-        domain_now = hass.data.get(DOMAIN, {})
-        domain_now.pop("_cancel_license_check", None)
-        if domain_now.get(LICENSE_DATA_KEY) is not mgr:
-            return
+    async def _async_check() -> None:
         try:
             was_valid = mgr.is_valid
             if mgr.needs_heartbeat:
                 await mgr.async_heartbeat()
             now_valid = mgr.is_valid
+            if hass.data.get(DOMAIN, {}).get(LICENSE_DATA_KEY) is not mgr:
+                return  # integrarea a fost descărcată în timpul verificării
             if was_valid != now_valid:
                 if now_valid:
                     _LOGGER.info("[Vehicule] Licența a redevenit validă — reîncarc senzorii")
@@ -270,7 +270,19 @@ def _schedule_license_check(hass: HomeAssistant, mgr: LicenseManager) -> None:
         finally:
             _schedule_license_check(hass, mgr)
 
-    domain_data["_cancel_license_check"] = async_call_later(hass, delay, _on_check)
+    @callback
+    def _on_timer(_now) -> None:
+        domain_now = hass.data.get(DOMAIN, {})
+        domain_now.pop("_cancel_license_check", None)
+        if hass.is_stopping or domain_now.get(LICENSE_DATA_KEY) is not mgr:
+            return
+        # Task de fundal: pornirea/oprirea Home Assistant nu așteaptă
+        # niciodată serverul de licențe (issue #329).
+        hass.async_create_background_task(
+            _async_check(), f"{DOMAIN}_license_check"
+        )
+
+    domain_data["_cancel_license_check"] = async_call_later(hass, delay, _on_timer)
     _LOGGER.debug("[Vehicule] Următoarea verificare a licenței peste %d secunde", delay)
 
 
