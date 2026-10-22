@@ -124,6 +124,27 @@ def _selector_data() -> selector.TextSelector:
 
 
 # ─────────────────────────────────────────────
+# Licență — etichete tip
+# ─────────────────────────────────────────────
+
+_ETICHETE_TIP_LICENTA = {
+    # Tipurile emise de WebAPI (LICENSE_DURATION)
+    "perpetual": ("perpetuă", "perpetual"),
+    "annual": ("anuală", "annual"),
+    "semi_annual": ("semestrială", "semi-annual"),
+    "monthly": ("lunară", "monthly"),
+}
+
+
+def _eticheta_tip_licenta(tip: str | None, is_ro: bool) -> str:
+    """Eticheta afișată pentru tipul de licență primit de la server."""
+    if not tip:
+        return "necunoscut" if is_ro else "unknown"
+    ro, en = _ETICHETE_TIP_LICENTA.get(tip, (tip, tip))
+    return ro if is_ro else en
+
+
+# ─────────────────────────────────────────────
 # Config Flow
 # ─────────────────────────────────────────────
 
@@ -1290,7 +1311,7 @@ class VehiculeOptionsFlow(config_entries.OptionsFlow):
         if server_status == "licensed":
             from datetime import datetime
 
-            tip = mgr.license_type or ("necunoscut" if is_ro else "unknown")
+            tip = _eticheta_tip_licenta(mgr.license_type, is_ro)
             status_lines = [
                 f"✅ {'Licență activă' if is_ro else 'Active license'} ({tip})"
             ]
@@ -1313,7 +1334,7 @@ class VehiculeOptionsFlow(config_entries.OptionsFlow):
                 ).strftime("%d.%m.%Y %H:%M")
                 lbl = "Expiră la" if is_ro else "Expires at"
                 status_lines.append(f"📅 {lbl}: {exp_date}")
-            elif tip == "perpetual":
+            elif mgr.license_type == "perpetual":
                 status_lines.append(
                     "Valabilitate: nelimitată (perpetuă)"
                     if is_ro
@@ -1409,27 +1430,7 @@ class VehiculeOptionsFlow(config_entries.OptionsFlow):
                         persistent_notification,
                     )
 
-                    _LICENSE_TYPE_LABELS = {
-                        "ro": {
-                            "monthly": "lunară",
-                            "yearly": "anuală",
-                            "perpetual": "perpetuă",
-                            "trial": "evaluare",
-                        },
-                        "en": {
-                            "monthly": "monthly",
-                            "yearly": "yearly",
-                            "perpetual": "perpetual",
-                            "trial": "trial",
-                        },
-                    }
-                    lang = "ro" if is_ro else "en"
-                    tip_label = _LICENSE_TYPE_LABELS[lang].get(
-                        mgr.license_type,
-                        mgr.license_type or (
-                            "necunoscut" if is_ro else "unknown"
-                        ),
-                    )
+                    tip_label = _eticheta_tip_licenta(mgr.license_type, is_ro)
 
                     if is_ro:
                         notif_msg = (
@@ -1454,16 +1455,17 @@ class VehiculeOptionsFlow(config_entries.OptionsFlow):
                         data=self.config_entry.options
                     )
 
-                # Mapare erori API
+                # Mapare erori API (codurile WebAPI /activate + erorile locale)
                 api_error = result.get("error", "unknown_error")
                 error_map = {
                     "invalid_key": "license_key_invalid",
                     "already_used": "license_already_used",
                     "expired_key": "license_key_expired",
                     "fingerprint_mismatch": "license_fingerprint_mismatch",
-                    "invalid_signature": "license_server_error",
                     "network_error": "license_network_error",
-                    "server_error": "license_server_error",
+                    "http_503": "license_network_error",  # server temporar ocupat
+                    "http_502": "license_network_error",
+                    "http_504": "license_network_error",
                 }
                 errors["base"] = error_map.get(api_error, "license_server_error")
 

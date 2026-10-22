@@ -204,6 +204,8 @@ _TRAD_CHEI_EN: dict[str, str] = {
     "Stare permis": "License status",
     # Licență necesară
     "licență": "license",
+    "status_licență": "license_status",
+    "zile_trial_rămase": "trial_days_remaining",
     "informații": "information",
     "nr_inmatriculare": "license_plate",
 }
@@ -216,6 +218,11 @@ _TRAD_VALORI_EN: dict[str, str] = {
     "Iarnă": "Winter",
     "necesară": "required",
     "Licență necesară": "License required",
+    "Licență expirată": "License expired",
+    "Trial expirat": "Trial expired",
+    "Activați o cheie de licență din Setări → Dispozitive → Vehicule.": (
+        "Activate a license key from Settings → Devices → Vehicule."
+    ),
     "Fără dată expirare": "No expiry date",
     "Activați licența pentru a vedea senzorii vehiculului.": (
         "Activate the license to see the vehicle sensors."
@@ -1272,12 +1279,8 @@ class LicentaNecesaraSensor(SensorEntity):
         if mgr is not None:
             status = mgr.status
             if status == "expired":
-                return _traduce_val(self.hass, "Licență expirată")
-            if status == "trial":
-                days = mgr.trial_days_remaining
                 return _traduce_val(
-                    self.hass,
-                    f"Trial — {days} zile rămase" if days > 0 else "Trial expirat",
+                    self.hass, "Licență expirată" if mgr.has_license else "Trial expirat"
                 )
         return _traduce_val(self.hass, "Licență necesară")
 
