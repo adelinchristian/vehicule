@@ -34,5 +34,5 @@ jobs:
       - name: Run HACS Action
         uses: hacs/action@main
         with:
-          category: "integration"
-          ignore: "brands"
+          category: "integration" 
+          ignore: "license"
