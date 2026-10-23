@@ -1,5 +1,6 @@
 """Constante pentru integrarea Vehicule."""
 
+import os
 from typing import Final
 
 # ─────────────────────────────────────────────
@@ -369,6 +370,14 @@ STRUCTURA_CATEGORII: Final = [
 CONF_LICENSE_KEY: Final = "license_key"
 LICENSE_DATA_KEY: Final = "vehicule_license_manager"
 LICENSE_PURCHASE_URL: Final = "https://hubinteligent.org/donate?ref=vehicule"
+
+USE_LICENSE: bool = str(os.environ.get("USE_LICENSE", "false")).strip().lower() not in {
+    "0",
+    "false",
+    "no",
+    "off",
+    "disabled",
+}
 
 
 def normalizeaza_numar(numar: str) -> str:
